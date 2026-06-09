@@ -1,0 +1,3443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dynasty Trade Analyser</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #00e5a0;
+    --accent2: #ff4d6d;
+    --accent3: #ffd60a;
+    --text: #e8e8f0;
+    --muted: #666680;
+    --win: #00e5a0;
+    --lose: #ff4d6d;
+    --even: #ffd60a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+
+  .logo-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .logo h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(32px, 6vw, 52px);
+    letter-spacing: 2px;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .logo h1 span { color: var(--accent); }
+
+  .badge {
+    background: rgba(0,229,160,0.1);
+    border: 1px solid rgba(0,229,160,0.3);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+
+  /* League Connect */
+  .connect-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .field-group {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  input[type="text"], select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  select option { background: var(--surface); }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: 4px;
+    border: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    font-weight: 600;
+  }
+
+  .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-danger {
+    background: transparent;
+    border: 1px solid rgba(255,77,109,0.3);
+    color: var(--accent2);
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  .btn-danger:hover { background: rgba(255,77,109,0.1); }
+
+  /* Status */
+  .status {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  .status.info { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.2); color: var(--accent); display: block; }
+  .status.error { background: rgba(255,77,109,0.08); border: 1px solid rgba(255,77,109,0.2); color: var(--accent2); display: block; }
+  .status.loading { background: rgba(255,214,10,0.08); border: 1px solid rgba(255,214,10,0.2); color: var(--accent3); display: block; }
+
+  /* Trade Builder */
+  .trade-builder {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0;
+    margin-bottom: 24px;
+    align-items: start;
+  }
+
+  /* On mobile: stack all 3 columns vertically */
+  @media (max-width: 700px) {
+    .trade-builder,
+    .trade-builder.three-way {
+      grid-template-columns: 1fr !important;
+      gap: 12px;
+    }
+    .trade-arrow { display: none !important; }
+    .trade-side { margin-bottom: 0; }
+  }
+
+  .trade-side {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .trade-side-header {
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .side-you .trade-side-header { background: rgba(0,229,160,0.05); }
+  .side-them .trade-side-header { background: rgba(255,77,109,0.05); }
+
+  .side-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+  }
+  .side-you .side-label { color: var(--accent); }
+  .side-them .side-label { color: var(--accent2); }
+
+  .side-value {
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(13px, 3vw, 16px);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .trade-assets {
+    padding: 14px;
+    min-height: 120px;
+  }
+
+  .asset-item {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    animation: slideIn 0.2s ease;
+    position: relative;
+  }
+
+  .asset-item-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-right: 28px;
+  }
+
+  .asset-item-vals {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    padding-left: 2px;
+  }
+
+  .asset-remove {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255,77,109,0.15);
+    border: 1px solid rgba(255,77,109,0.3);
+    color: var(--accent2);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .asset-remove:hover { background: rgba(255,77,109,0.35); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .asset-name { font-weight: 500; flex: 1; }
+  .asset-pos {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-right: 8px;
+    font-weight: 600;
+  }
+
+  .pos-QB { background: rgba(255,77,109,0.15); color: var(--accent2); }
+  .pos-RB { background: rgba(0,229,160,0.15); color: var(--accent); }
+  .pos-WR { background: rgba(100,149,255,0.15); color: #6495ff; }
+  .pos-TE { background: rgba(255,214,10,0.15); color: var(--accent3); }
+  .pos-PICK { background: rgba(180,100,255,0.15); color: #b464ff; }
+
+  .asset-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-right: 8px;
+  }
+
+  /* Arrow divider */
+  .trade-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 12px;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 20px;
+    margin-top: 50px;
+  }
+
+  /* Player search */
+  .search-area {
+    padding: 0 14px 14px;
+    position: relative;
+  }
+
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+
+  .search-results {
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 9999;
+    display: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  }
+
+  .search-results.open { display: block; }
+
+  .search-result-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: background 0.1s;
+  }
+
+  .search-result-item:active { background: rgba(0,229,160,0.12); }
+  .search-result-item:hover { background: rgba(0,229,160,0.07); }
+
+  .search-result-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .search-result-vals {
+    display: flex;
+    gap: 10px;
+    padding-left: 2px;
+    align-items: center;
+  }
+
+  .result-value { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  /* Verdict */
+  .verdict-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
+    text-align: center;
+    display: none;
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .verdict-panel.visible { display: block; }
+
+  .verdict-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .verdict-result {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(36px, 8vw, 64px);
+    letter-spacing: 3px;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .verdict-WIN { color: var(--win); }
+  .verdict-LOSE { color: var(--lose); }
+  .verdict-EVEN { color: var(--even); }
+
+  .verdict-diff {
+    font-family: 'DM Mono', monospace;
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
+  .verdict-bar-wrap {
+    height: 8px;
+    background: var(--bg);
+    border-radius: 99px;
+    overflow: hidden;
+    max-width: 500px;
+    margin: 0 auto 16px;
+  }
+
+  .verdict-bar {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.6s cubic-bezier(.4,0,.2,1);
+  }
+
+  .verdict-breakdown {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+  }
+
+  .breakdown-item { display: flex; flex-direction: column; gap: 2px; }
+  .breakdown-val { font-size: 20px; font-weight: 500; }
+  .breakdown-lbl { color: var(--muted); font-size: 10px; letter-spacing: 1px; }
+
+  /* Roster panel */
+  .roster-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .roster-panel.visible { display: block; }
+
+  .roster-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .roster-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+  }
+
+  .roster-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .roster-player {
+    background: var(--surface);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background 0.1s;
+    font-size: 13px;
+  }
+
+  .roster-player:hover { background: rgba(0,229,160,0.05); }
+
+  .roster-player .player-val {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 24px;
+    color: var(--muted);
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .mode-btn {
+    padding: 7px 18px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mode-btn.active {
+    background: rgba(0,229,160,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .mode-btn:hover:not(.active) { border-color: var(--muted); color: var(--text); }
+
+  .side-c .trade-side-header { background: rgba(180,100,255,0.05); }
+
+  /* 3-way grid override */
+  .trade-builder.three-way {
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+  }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .tab-nav {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+
+  .tab-btn {
+    padding: 10px 18px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: -1px;
+  }
+
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 16px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+
+  /* History */
+  .history-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .history-header {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+
+  .history-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .history-teams {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .history-verdict {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+
+  .history-verdict.win  { background: rgba(0,229,160,0.15);  color: var(--win);  }
+  .history-verdict.lose { background: rgba(255,77,109,0.15); color: var(--lose); }
+  .history-verdict.even { background: rgba(255,214,10,0.15); color: var(--even); }
+
+  .history-sides {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .history-side {
+    background: var(--surface);
+    padding: 10px 12px;
+  }
+
+  .history-side-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .history-player {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  .history-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  .ai-btn {
+    display: block;
+    width: calc(100% - 28px);
+    margin: 10px 14px 12px;
+    padding: 8px;
+    background: rgba(0,229,160,0.06);
+    border: 1px solid rgba(0,229,160,0.2);
+    border-radius: 4px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .ai-btn:hover { background: rgba(0,229,160,0.12); }
+
+  .ai-analysis {
+    margin: 0 14px 14px;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--text);
+    display: none;
+    white-space: pre-wrap;
+  }
+
+  .ai-analysis.visible { display: block; }
+
+  /* Rankings */
+  .rankings-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .rankings-row {
+    display: grid;
+    grid-template-columns: 36px 1fr 90px 90px 90px;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+  }
+
+  .rankings-row:last-child { border-bottom: none; }
+
+  .rankings-row.header {
+    background: rgba(255,255,255,0.03);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .rankings-cell {
+    padding: 10px 10px;
+    font-size: 13px;
+  }
+
+  .rank-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .rank-num.gold   { color: #ffd700; }
+  .rank-num.silver { color: #c0c0c0; }
+  .rank-num.bronze { color: #cd7f32; }
+
+  .rank-name {
+    font-weight: 500;
+  }
+
+  .rank-fc {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    text-align: right;
+  }
+
+  .rank-ra {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: #f97316;
+    text-align: right;
+  }
+
+  .rank-bar-cell { padding: 10px 10px; }
+
+  .rank-bar-bg {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .rank-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: width 0.6s ease;
+  }
+
+  @media (max-width: 600px) {
+    .rankings-row { grid-template-columns: 30px 1fr 70px 70px; }
+    .rank-bar-cell { display: none; }
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border: 2px solid rgba(255,214,10,0.3);
+    border-top-color: var(--accent3);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .fc-note {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 8px;
+    padding: 0 14px 14px;
+  }
+
+  .clear-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0 14px 10px;
+    display: block;
+  }
+
+  .clear-btn:hover { color: var(--accent2); }
+
+  .fc-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    margin-right: 4px;
+    white-space: nowrap;
+  }
+
+  .dp-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: #f97316;
+    margin-right: 4px;
+    white-space: nowrap;
+  }
+
+  .asset-dest {
+    display: flex;
+    gap: 4px;
+    margin-top: 5px;
+    flex-wrap: wrap;
+  }
+
+  .dest-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .dest-btn.active-you  { background: rgba(0,229,160,0.15);  border-color: var(--accent);  color: var(--accent);  }
+  .dest-btn.active-them { background: rgba(255,77,109,0.15); border-color: var(--accent2); color: var(--accent2); }
+  .dest-btn.active-c    { background: rgba(180,100,255,0.15);border-color: #b464ff;        color: #b464ff;        }
+
+  .dest-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 5px;
+    display: block;
+  }
+
+  .owner-confirm-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+
+  .owner-confirm-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .owner-confirm-btn {
+    flex: 1;
+    background: rgba(255,214,10,0.08);
+    border: 1px solid rgba(255,214,10,0.3);
+    border-radius: 4px;
+    color: var(--accent3);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 5px 10px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    min-width: 0;
+  }
+
+  .owner-confirm-btn:hover, .owner-confirm-btn:active {
+    background: rgba(255,214,10,0.18);
+    border-color: var(--accent3);
+  }
+
+  .owner-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent3);
+    background: rgba(255,214,10,0.1);
+    border: 1px solid rgba(255,214,10,0.2);
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  .result-dp {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: #f97316;
+    margin-right: 6px;
+    white-space: nowrap;
+  }
+
+  .player-dp {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: #f97316;
+    margin-right: 6px;
+    white-space: nowrap;
+  }
+
+  .side-user-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+
+  .side-user-input {
+    flex: 1;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 3px;
+    padding: 4px 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    min-width: 0;
+  }
+
+  .side-user-input:focus { border-color: rgba(255,255,255,0.3); }
+
+  .side-load-btn {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 3px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 4px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+
+  .side-load-btn:hover { background: rgba(0,229,160,0.1); border-color: var(--accent); color: var(--accent); }
+
+  .trade-flow-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    text-align: left;
+  }
+
+  .flow-from {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    padding-top: 2px;
+    min-width: 80px;
+  }
+
+  .flow-arrow {
+    color: var(--muted);
+    font-size: 16px;
+    padding-top: 0px;
+    flex-shrink: 0;
+  }
+
+  .flow-to {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    padding-top: 2px;
+    min-width: 70px;
+  }
+
+  .flow-players {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .flow-player-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .flow-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .balance-box {
+    background: rgba(255,214,10,0.06);
+    border: 1px solid rgba(255,214,10,0.2);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-size: 13px;
+    text-align: left;
+    line-height: 1.6;
+  }
+
+  .balance-box strong {
+    color: var(--accent3);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  .balance-option {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .balance-option .bal-val {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* ── Finder / BuySell / Waiver shared styles ── */
+  .finder-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .finder-card-header {
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,229,160,0.04);
+  }
+
+  .finder-card-body {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .finder-trade-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+
+  .finder-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    min-width: 40px;
+    padding-top: 3px;
+  }
+
+  .finder-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    flex: 1;
+  }
+
+  .finder-net {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .finder-net.pos { background: rgba(0,229,160,0.12); color: var(--win); }
+  .finder-net.neg { background: rgba(255,77,109,0.12); color: var(--lose); }
+  .finder-net.even { background: rgba(255,214,10,0.12); color: var(--even); }
+
+  /* BuySell */
+  .buysell-section-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    padding: 12px 0 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+  }
+
+  .buysell-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+
+  .buysell-name { flex: 1; font-size: 13px; font-weight: 500; min-width: 120px; }
+
+  .buysell-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 3px 8px;
+    border-radius: 3px;
+  }
+
+  .buysell-badge.sell { background: rgba(255,77,109,0.15); color: var(--accent2); border: 1px solid rgba(255,77,109,0.3); }
+  .buysell-badge.buy  { background: rgba(0,229,160,0.15);  color: var(--accent);  border: 1px solid rgba(0,229,160,0.3);  }
+  .buysell-badge.hold { background: rgba(255,214,10,0.12); color: var(--even);    border: 1px solid rgba(255,214,10,0.3); }
+
+  .buysell-vals {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .buysell-gap {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .buysell-owner {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent3);
+    background: rgba(255,214,10,0.08);
+    border: 1px solid rgba(255,214,10,0.2);
+    border-radius: 3px;
+    padding: 2px 6px;
+  }
+
+  /* Waiver */
+  .waiver-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+
+  .waiver-name { flex: 1; font-size: 13px; font-weight: 500; min-width: 120px; }
+  .waiver-vals { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  .feedback-btn {
+    padding: 8px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .feedback-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .feedback-btn.selected { background: rgba(0,229,160,0.1); border-color: var(--accent); color: var(--accent); }
+  .feedback-btn.selected-bad { background: rgba(255,77,109,0.1); border-color: var(--accent2); color: var(--accent2); }
+
+  .opp-roster-header {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    background: rgba(0,229,160,0.04);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo">
+      <span class="logo-tag">2QB · Superflex · PPR</span>
+      <h1>TRADE<span>LAB</span></h1>
+    </div>
+    <div class="badge">FC · ROSTERAUDIT · SLEEPER</div>
+  </header>
+
+  <!-- League Connect -->
+  <div class="connect-panel">
+    <div class="field-group">
+      <label>Sleeper Username</label>
+      <input type="text" id="sleeperUser" placeholder="thefint" />
+    </div>
+    <div class="field-group" style="min-width:160px;max-width:220px;">
+      <label>League</label>
+      <select id="leagueSelect">
+        <option value="">— load leagues —</option>
+      </select>
+    </div>
+    <button class="btn btn-ghost" id="loadLeaguesBtn" onclick="loadLeagues()">Load Leagues</button>
+    <button class="btn btn-primary" id="loadRosterBtn" onclick="loadRoster()" disabled>Load My Roster</button>
+  </div>
+
+  <div id="statusMsg" class="status"></div>
+
+  <!-- Tab Navigation -->
+  <div class="tab-nav" id="tabNav" style="display:none;">
+    <button class="tab-btn active" onclick="showTab('trade')">🔄 TRADE</button>
+    <button class="tab-btn" onclick="showTab('finder')">🔍 FINDER</button>
+    <button class="tab-btn" onclick="showTab('buysell')">📈 BUY/SELL</button>
+    <button class="tab-btn" onclick="showTab('waiver')">🎯 WAIVER</button>
+    <button class="tab-btn" onclick="showTab('history')">📋 HISTORY</button>
+    <button class="tab-btn" onclick="showTab('rankings')">🏆 RANKINGS</button>
+  </div>
+
+  <!-- TAB: TRADE BUILDER -->
+  <div id="tab-trade">
+  <div id="myRosterInline" class="roster-panel" style="display:none;margin-bottom:16px;"></div>
+  <!-- Opponent Roster Panels (inline below trade sides) -->
+  <div id="oppRosterB" class="roster-panel" style="display:none;margin-bottom:16px;"></div>
+  <div id="oppRosterC" class="roster-panel" style="display:none;margin-bottom:16px;"></div>
+
+  <!-- Mode Toggle -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+    <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;">Mode</span>
+    <button class="mode-btn active" id="btn2way" onclick="setMode(2)">2-TEAM</button>
+    <button class="mode-btn" id="btn3way" onclick="setMode(3)">3-TEAM</button>
+  </div>
+
+  <!-- Trade Builder -->
+  <div class="trade-builder" id="tradeBuilder">
+
+    <!-- YOU GIVE -->
+    <div class="trade-side side-you">
+      <div class="trade-side-header">
+        <div style="flex:1;">
+          <div class="side-user-row">
+            <input class="side-user-input" id="userA" placeholder="thefint" value="" oninput="updateSideLabel('you',this.value)" />
+            <button class="side-load-btn" onclick="loadSideRoster('you')">↓ load</button>
+          </div>
+          <span class="side-label">GIVES</span>
+        </div>
+        <span class="side-value" id="youGiveVal" style="color:var(--accent2);">0</span>
+      </div>
+      <div class="trade-assets" id="youGiveAssets">
+        <div class="empty-state">Add players or picks below</div>
+      </div>
+      <div class="search-area">
+        <div class="search-wrap">
+          <input class="search-input" id="searchYou" placeholder="Search player or pick (e.g. 2027)…" oninput="searchPlayers(this.value, 'you')" autocomplete="off" />
+          <div class="search-results" id="resultsYou"></div>
+        </div>
+      </div>
+      <div class="pick-row" id="picksYou" style="display:none;"></div>
+      <button class="clear-btn" onclick="clearSide('you')">clear all</button>
+    </div>
+
+    <div class="trade-arrow">
+      <span>⇄</span>
+    </div>
+
+    <!-- YOU GET -->
+    <div class="trade-side side-them">
+      <div class="trade-side-header">
+        <div style="flex:1;">
+          <div class="side-user-row">
+            <input class="side-user-input" id="userB" placeholder="Chacolling" oninput="updateSideLabel('them',this.value)" />
+            <button class="side-load-btn" onclick="loadSideRoster('them')">↓ load</button>
+          </div>
+          <span class="side-label" id="labelB" style="color:var(--accent);">GIVES</span>
+        </div>
+        <span class="side-value" id="youGetVal" style="color:var(--accent);">0</span>
+      </div>
+      <div class="trade-assets" id="youGetAssets">
+        <div class="empty-state">Add players or picks below</div>
+      </div>
+      <div class="search-area">
+        <div class="search-wrap">
+          <input class="search-input" id="searchThem" placeholder="Search player or pick (e.g. 2027)…" oninput="searchPlayers(this.value, 'them')" autocomplete="off" />
+          <div class="search-results" id="resultsThem"></div>
+        </div>
+      </div>
+      <div class="pick-row" id="picksThem" style="display:none;"></div>
+      <button class="clear-btn" onclick="clearSide('them')">clear all</button>
+    </div>
+
+    <!-- TEAM C (3-way only) -->
+    <div class="trade-arrow" id="arrow3" style="display:none;"><span>⇄</span></div>
+    <div class="trade-side side-c" id="sideC" style="display:none;">
+      <div class="trade-side-header">
+        <div style="flex:1;">
+          <div class="side-user-row">
+            <input class="side-user-input" id="userC" placeholder="Coady13" oninput="updateSideLabel('c',this.value)" />
+            <button class="side-load-btn" onclick="loadSideRoster('c')">↓ load</button>
+          </div>
+          <span class="side-label" style="color:#b464ff;">GIVES</span>
+        </div>
+        <span class="side-value" id="teamCVal" style="color:#b464ff;">0</span>
+      </div>
+      <div class="trade-assets" id="teamCAssets">
+        <div class="empty-state">Add players or picks below</div>
+      </div>
+      <div class="search-area">
+        <div class="search-wrap">
+          <input class="search-input" id="searchC" placeholder="Search player or pick (e.g. 2027)…" oninput="searchPlayers(this.value, 'c')" autocomplete="off" />
+          <div class="search-results" id="resultsC"></div>
+        </div>
+      </div>
+      <div class="pick-row" id="picksC" style="display:none;"></div>
+      <button class="clear-btn" onclick="clearSide('c')">clear all</button>
+    </div>
+
+  </div>
+
+  <div style="text-align:center;margin-bottom:16px;">
+    <button class="btn btn-primary" onclick="analyseTrade()" style="padding:12px 40px;font-size:13px;letter-spacing:2px;">ANALYSE TRADE</button>
+  </div>
+
+  <!-- Verdict -->
+  <div class="verdict-panel" id="verdictPanel">
+    <div class="verdict-label">Trade Verdict</div>
+    <div class="verdict-result" id="verdictResult"></div>
+    <div class="verdict-diff" id="verdictDiff"></div>
+    <div class="verdict-bar-wrap">
+      <div class="verdict-bar" id="verdictBar"></div>
+    </div>
+    <div class="verdict-breakdown">
+      <div class="breakdown-item">
+        <span class="breakdown-val" id="brkGive" style="color:var(--accent2)"></span>
+        <span class="breakdown-lbl" id="brkGiveLabel">YOU GIVE</span>
+      </div>
+      <div class="breakdown-item">
+        <span class="breakdown-val" id="brkGet" style="color:var(--accent)"></span>
+        <span class="breakdown-lbl" id="brkGetLabel">YOU GET</span>
+      </div>
+      <div class="breakdown-item">
+        <span class="breakdown-val" id="brkPct"></span>
+        <span class="breakdown-lbl" id="brkPctLabel">VALUE %</span>
+      </div>
+    </div>
+    <div id="verdictExtra"></div>
+
+    <!-- Trade Flow -->
+    <div id="tradeFlow" style="margin-top:20px;display:none;">
+      <div class="verdict-label" style="margin-bottom:12px;">TRADE BREAKDOWN</div>
+      <div id="tradeFlowRows"></div>
+    </div>
+
+    <!-- Balance Suggestion -->
+    <div id="balanceSection" style="margin-top:20px;display:none;">
+      <div class="verdict-label" style="margin-bottom:8px;">⚖ BALANCE SUGGESTION</div>
+      <div id="balanceText"></div>
+    </div>
+
+    <!-- Live AI Analysis -->
+    <div id="liveAISection" style="margin-top:20px;display:none;">
+      <div class="verdict-label" style="margin-bottom:10px;">✦ AI ANALYSIS</div>
+      <div id="liveAIText" class="ai-analysis visible" style="margin:0;"></div>
+      <!-- Feedback -->
+      <div id="aiFeedbackRow" style="display:none;margin-top:12px;">
+        <div class="verdict-label" style="margin-bottom:8px;">WAS THIS ANALYSIS HELPFUL?</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="feedback-btn" id="fbGood" onclick="submitFeedback('good')">👍 Good call</button>
+          <button class="feedback-btn" id="fbBad" onclick="submitFeedback('bad')">👎 Off the mark</button>
+          <button class="feedback-btn" id="fbAccepted" onclick="submitFeedback('accepted')">✅ Accepted trade</button>
+          <button class="feedback-btn" id="fbDeclined" onclick="submitFeedback('declined')">❌ Declined trade</button>
+        </div>
+        <div id="feedbackNote" style="margin-top:10px;display:none;">
+          <input type="text" id="feedbackText" class="search-input" placeholder="Add a note (optional)…" style="width:100%;margin-bottom:8px;" />
+          <button class="btn btn-primary" onclick="saveFeedbackNote()" style="font-size:11px;padding:8px 20px;">Save</button>
+        </div>
+        <div id="feedbackSaved" style="display:none;font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <div class="fc-note" style="margin-top:16px;">FantasyCalc (FC) · RosterAudit (RA) · 2QB Superflex · Dynasty · PPR</div>
+  </div>
+
+</div><!-- end tab-trade -->
+
+<!-- TAB: TRADE FINDER -->
+<div id="tab-finder" style="display:none;">
+  <div class="tab-section-header">
+    <span>Trade Finder</span>
+    <button class="btn btn-ghost" onclick="loadTradeFinder()" style="font-size:11px;padding:6px 14px;">↻ Scan</button>
+  </div>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:16px;">Finds the best trade targets across your league based on your roster needs.</div>
+  <div id="finderList"><div class="empty-state" style="padding:40px;">Load your league first, then click Scan.</div></div>
+</div>
+
+<!-- TAB: BUY/SELL -->
+<div id="tab-buysell" style="display:none;">
+  <div class="tab-section-header">
+    <span>Buy / Sell Indicators</span>
+    <button class="btn btn-ghost" onclick="loadBuySell()" style="font-size:11px;padding:6px 14px;">↻ Refresh</button>
+  </div>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:16px;">FC vs RA gap flags players to sell high or buy low across your entire league.</div>
+  <div id="buysellList"><div class="empty-state" style="padding:40px;">Load your league first, then click Refresh.</div></div>
+</div>
+
+<!-- TAB: WAIVER WIRE -->
+<div id="tab-waiver" style="display:none;">
+  <div class="tab-section-header">
+    <span>Waiver Wire</span>
+    <button class="btn btn-ghost" onclick="loadWaiverWire()" style="font-size:11px;padding:6px 14px;">↻ Scan</button>
+  </div>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:16px;">Players with dynasty value sitting unclaimed in your league.</div>
+  <div id="waiverList"><div class="empty-state" style="padding:40px;">Load your league first, then click Scan.</div></div>
+</div>
+<div id="tab-history" style="display:none;">
+  <div class="tab-section-header">
+    <span>League Trade History</span>
+    <button class="btn btn-ghost" onclick="loadTradeHistory()" style="font-size:11px;padding:6px 14px;">↻ Refresh</button>
+  </div>
+  <div id="historyList"><div class="empty-state" style="padding:40px;">Load your league first, then click Refresh.</div></div>
+</div>
+
+<!-- TAB: LEAGUE RANKINGS -->
+<div id="tab-rankings" style="display:none;">
+  <div class="tab-section-header">
+    <span>League Power Rankings</span>
+    <button class="btn btn-ghost" onclick="loadLeagueRankings()" style="font-size:11px;padding:6px 14px;">↻ Refresh</button>
+  </div>
+  <div id="rankingsList"><div class="empty-state" style="padding:40px;">Load your league first, then click Refresh.</div></div>
+</div>
+
+</div><!-- end container -->
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+let fcValues = {};
+let fcByName = {};
+let raByName = {};        // normalized name → RosterAudit value
+let myRoster = [];
+let allRosters = [];      // all league rosters
+let allUsers = {};        // owner_id → {username, display_name}
+let playerOwnerMap = {};  // sleeper player_id → {username, owner_id}
+let nameToSleeperId = {}; // normalized name → sleeper player_id
+let ownerByName = {};     // normalized name → {username, owner_id}
+let rosterIdToUsername = {}; // roster_id → display name
+let playerData = {};      // sleeper player id → player info
+let tradeYou = [];
+let tradeThem = [];
+let tradeC = [];
+let userId = null;
+let leagues = [];
+let tradeMode = 2;
+
+const PICK_VALUES_2QB = {
+  '2027 Early 1st': 5500, '2027 Mid 1st': 4400, '2027 Late 1st': 3600,
+  '2027 Early 2nd': 2400, '2027 Mid 2nd': 2000, '2027 Late 2nd': 1600,
+  '2028 Early 1st': 4500, '2028 Mid 1st': 3600, '2028 Late 1st': 2900,
+  '2028 Early 2nd': 1900, '2028 Mid 2nd': 1600, '2028 Late 2nd': 1300,
+};
+
+// ── FantasyCalc ───────────────────────────────────────────────────────────
+async function loadFC() {
+  try {
+    const res = await fetch('https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=2&ppr=1&numTeams=12');
+    if (!res.ok) throw new Error('FC fetch failed');
+    const data = await res.json();
+    fcValues = {};
+    fcByName = {};
+    data.forEach(p => {
+      const val = p.value || 0;
+      const name = (p.player?.name || '').toLowerCase().replace(/[^a-z ]/g,'');
+      const pos = p.player?.position || '';
+      if (name) {
+        fcByName[name] = { value: val, position: pos, displayName: p.player?.name };
+      }
+    });
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+// ── RosterAudit — fetched live from GitHub ───────────────────────────────
+const RA_GITHUB_URL = 'https://raw.githubusercontent.com/thefint/tradelab/main/rankings.csv';
+
+// ── RosterAudit lookup ────────────────────────────────────────────────────
+async function buildRA() {
+  try {
+    const res = await fetch(RA_GITHUB_URL);
+    if (!res.ok) throw new Error('RA fetch failed');
+    const text = await res.text();
+    const lines = text.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim().replace(/[\r"]/g,''));
+    const nameIdx  = headers.indexOf('Player');
+    const valIdx   = headers.indexOf('Value');
+    const posIdx   = headers.indexOf('Position');
+    const rankIdx  = headers.indexOf('Rank');
+
+    raByName = {};
+    lines.slice(1).forEach(line => {
+      const cols = line.split(',').map(c => c.trim().replace(/[\r"]/g,''));
+      const name = cols[nameIdx] || '';
+      const val  = parseInt(cols[valIdx]) || 0;
+      const pos  = cols[posIdx] || '';
+      const rank = parseInt(cols[rankIdx]) || 0;
+      if (name && val) {
+        const key = name.toLowerCase().replace(/[^a-z ]/g,'');
+        raByName[key] = { value: val, position: pos, rank, displayName: name };
+      }
+    });
+    console.log('RA values loaded from GitHub:', Object.keys(raByName).length, 'players');
+  } catch(e) {
+    console.warn('GitHub RA fetch failed — RA values unavailable:', e.message);
+    raByName = {};
+  }
+}
+
+function fcLookup(name) {
+  const key = name.toLowerCase().replace(/[^a-z ]/g,'');
+  const fc = fcByName[key] || null;
+  const ra = raByName[key] || null;
+  if (!fc && !ra) return null;
+  return {
+    value: fc ? fc.value : 0,
+    raValue: ra ? ra.value : null,
+    raRank: ra ? ra.rank : null,
+    position: fc ? fc.position : (ra ? ra.position : ''),
+    displayName: fc ? fc.displayName : name,
+  };
+}
+
+// ── Sleeper ───────────────────────────────────────────────────────────────
+async function loadLeagues() {
+  const user = document.getElementById('sleeperUser').value.trim();
+  if (!user) return setStatus('Enter your Sleeper username first.', 'error');
+
+  setStatus('<span class="spinner"></span> Fetching leagues…', 'loading');
+
+  try {
+    const uRes = await fetch(`https://api.sleeper.app/v1/user/${user}`);
+    if (!uRes.ok) throw new Error('User not found');
+    const uData = await uRes.json();
+    userId = uData.user_id;
+
+    const lRes = await fetch(`https://api.sleeper.app/v1/user/${userId}/leagues/nfl/2026`);
+    leagues = await lRes.json();
+
+    const sel = document.getElementById('leagueSelect');
+    sel.innerHTML = '<option value="">— select league —</option>';
+    leagues.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.league_id;
+      opt.textContent = l.name;
+      sel.appendChild(opt);
+    });
+
+    document.getElementById('loadRosterBtn').disabled = false;
+    // Pre-fill Team A username field
+    document.getElementById('userA').value = user;
+    setStatus(`Found ${leagues.length} leagues for @${user}`, 'info');
+  } catch(e) {
+    setStatus('Could not load leagues. Check your username.', 'error');
+  }
+}
+
+async function loadRoster() {
+  const leagueId = document.getElementById('leagueSelect').value;
+  if (!leagueId) return setStatus('Select a league first.', 'error');
+
+  setStatus('<span class="spinner"></span> Loading rosters + FantasyCalc + RosterAudit values…', 'loading');
+
+  buildRA();
+    const [fcOk] = await Promise.all([loadFC()]);
+    const dpOk = true;
+  if (!fcOk) setStatus('FantasyCalc load issue — FC values may be incomplete.', 'error');
+  
+
+  try {
+    // Fetch all rosters, users, and player info in parallel
+    const [rRes, uRes, pRes] = await Promise.all([
+      fetch(`https://api.sleeper.app/v1/league/${leagueId}/rosters`),
+      fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`),
+      fetch('https://api.sleeper.app/v1/players/nfl'),
+    ]);
+    allRosters = await rRes.json();
+    const users = await uRes.json();
+    playerData = await pRes.json();
+
+    // Build owner_id → user map
+    allUsers = {};
+    users.forEach(u => { allUsers[u.user_id] = { username: u.username, display_name: u.display_name || u.username }; });
+
+    // Build roster_id → username map (handles orphaned rosters gracefully)
+    rosterIdToUsername = {};
+    allRosters.forEach((r, i) => {
+      const u = allUsers[r.owner_id] || {};
+      rosterIdToUsername[r.roster_id] = u.display_name || u.username || `Team ${i + 1}`;
+    });
+
+    // Build player name → sleeper_id map for ownership lookups
+    nameToSleeperId = {};
+    ownerByName = {};  // normalized name → {username, owner_id}
+    Object.entries(playerData).forEach(([pid, p]) => {
+      const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+      const key = name.toLowerCase().replace(/[^a-z ]/g,'');
+      if (key) nameToSleeperId[key] = pid;
+    });
+    playerOwnerMap = {};
+    allRosters.forEach(r => {
+      const username = rosterIdToUsername[r.roster_id] || `Team ${r.roster_id}`;
+      (r.players || []).forEach(pid => {
+        playerOwnerMap[pid] = { username, owner_id: r.owner_id };
+        const p = playerData[pid];
+        if (p) {
+          const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+          const key = name.toLowerCase().replace(/[^a-z ]/g,'');
+          if (key) ownerByName[key] = { username, owner_id: r.owner_id };
+        }
+      });
+    });
+
+    const myRosterData = allRosters.find(r => r.owner_id === userId);
+    if (!myRosterData) throw new Error('Your roster not found — are you in this league?');
+
+    myRoster = rosterToPlayers(myRosterData.players || []);
+
+    renderRoster();
+    document.getElementById('tabNav').style.display = 'flex';
+    setStatus(`Loaded ${myRoster.length} players · ${allRosters.length} teams in league. Click any player to add to trade.`, 'info');
+
+    // Load this user's feedback profile from Supabase
+    loadUserProfile(user);
+  } catch(e) {
+    setStatus('Error loading roster: ' + e.message, 'error');
+  }
+}
+
+function rosterToPlayers(playerIds) {
+  return playerIds.map(pid => {
+    const p = playerData[pid];
+    if (!p) return null;
+    const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+    const pos = p.position || '?';
+    const fc = fcLookup(name);
+    return {
+      name,
+      position: fc ? fc.position || pos : pos,
+      value: fc ? fc.value : 0,
+      raValue: fc ? fc.raValue : null, raRank: fc ? fc.raRank : null,
+      sleeperId: pid
+    };
+  }).filter(Boolean).sort((a,b) => b.value - a.value);
+}
+
+// ── Render Roster ─────────────────────────────────────────────────────────
+function renderRoster() {
+  const username = document.getElementById('userA').value.trim() || 'You';
+  renderSideRosterPanel('you', username, myRoster);
+}
+
+function updateSideLabel(side, val) {
+  // live-update the placeholder label as user types — nothing else needed
+}
+
+async function loadSideRoster(side) {
+  const inputId = side === 'you' ? 'userA' : side === 'them' ? 'userB' : 'userC';
+  const username = document.getElementById(inputId).value.trim();
+  if (!username) return setStatus('Enter a Sleeper username in that column first.', 'error');
+
+  setStatus(`<span class="spinner"></span> Loading ${username}'s roster…`, 'loading');
+
+  try {
+    // Make sure FC+RA are loaded
+    if (!Object.keys(fcByName).length) await loadFC();
+    buildRA();
+    // Also need playerData — fetch if empty
+    if (!Object.keys(playerData).length) {
+      const pRes = await fetch('https://api.sleeper.app/v1/players/nfl');
+      playerData = await pRes.json();
+    }
+
+    // Resolve username → user object (get canonical username back)
+    const uRes = await fetch(`https://api.sleeper.app/v1/user/${username}`);
+    if (!uRes.ok) throw new Error(`User "${username}" not found`);
+    const uData = await uRes.json();
+    const targetUserId = uData.user_id;
+    const canonicalUsername = uData.username || username;
+    const displayName = uData.display_name || canonicalUsername;
+
+    // Update the input to show the clean username (not a number)
+    document.getElementById(inputId).value = canonicalUsername;
+
+    // If we already have allRosters for the current league, use them
+    // Otherwise fall back to fetching the user's leagues to find a matching one
+    let players = null;
+
+    if (allRosters.length) {
+      const r = allRosters.find(r => r.owner_id === targetUserId);
+      if (r) players = r.players || [];
+    }
+
+    if (players === null) {
+      // Try to find shared league — fetch their leagues for current season
+      const leagueId = document.getElementById('leagueSelect').value;
+      if (leagueId) {
+        const rRes = await fetch(`https://api.sleeper.app/v1/league/${leagueId}/rosters`);
+        const rosters = await rRes.json();
+        const r = rosters.find(r => r.owner_id === targetUserId);
+        if (r) {
+          players = r.players || [];
+        } else {
+          // Not in selected league — try their leagues
+          const lRes = await fetch(`https://api.sleeper.app/v1/user/${targetUserId}/leagues/nfl/2026`);
+          const theirLeagues = await lRes.json();
+          if (!theirLeagues.length) throw new Error(`No 2026 leagues found for ${username}`);
+          // Use first league
+          const firstLeague = theirLeagues[0].league_id;
+          const rRes2 = await fetch(`https://api.sleeper.app/v1/league/${firstLeague}/rosters`);
+          const rosters2 = await rRes2.json();
+          const r2 = rosters2.find(r => r.owner_id === targetUserId);
+          players = r2 ? (r2.players || []) : [];
+        }
+      } else {
+        const lRes = await fetch(`https://api.sleeper.app/v1/user/${targetUserId}/leagues/nfl/2026`);
+        const theirLeagues = await lRes.json();
+        if (!theirLeagues.length) throw new Error(`No 2026 leagues found for ${username}`);
+        const firstLeague = theirLeagues[0].league_id;
+        const rRes2 = await fetch(`https://api.sleeper.app/v1/league/${firstLeague}/rosters`);
+        const rosters2 = await rRes2.json();
+        const r2 = rosters2.find(r => r.owner_id === targetUserId);
+        players = r2 ? (r2.players || []) : [];
+      }
+    }
+
+    const roster = rosterToPlayers(players);
+    renderSideRosterPanel(side, displayName, roster);
+    setStatus(`Loaded ${displayName}'s roster — click players to add to that column.`, 'info');
+
+  } catch(e) {
+    setStatus('Error: ' + e.message, 'error');
+  }
+}
+
+function renderSideRosterPanel(side, username, players) {
+  const panelId = side === 'them' ? 'oppRosterB' : side === 'c' ? 'oppRosterC' : 'myRosterInline';
+  let panel = document.getElementById(panelId);
+  if (!panel) return;
+
+  panel.innerHTML = '';
+  const header = document.createElement('div');
+  header.className = 'opp-roster-header';
+  // Always show the username as typed, never a numeric ID
+  const displayLabel = username.match(/^\d+$/) ? 'Roster' : `@${username}`;
+  header.innerHTML = `<span>${displayLabel}'s Roster</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);">${players.length} players</span>`;
+  panel.appendChild(header);
+
+  const grid = document.createElement('div');
+  grid.className = 'roster-grid';
+  players.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'roster-player';
+    const dpSpan = p.raValue != null ? `<span class="player-dp">RA ${p.raValue.toLocaleString()}</span>` : '';
+    div.innerHTML = `
+      <span class="asset-pos pos-${p.position}">${p.position}</span>
+      <span style="flex:1;">${p.name}</span>
+      ${dpSpan}
+      <span class="player-val">${p.value ? 'FC ' + p.value.toLocaleString() : '—'}</span>`;
+    div.onclick = () => addAsset(side, p);
+    grid.appendChild(div);
+  });
+  panel.appendChild(grid);
+  panel.style.display = 'block';
+}
+
+function buildPickButtons(containerId, side) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  Object.keys(PICK_VALUES_2QB).slice(0,12).forEach(pick => {
+    const btn = document.createElement('button');
+    btn.className = 'pick-btn';
+    btn.textContent = pick;
+    btn.onclick = () => addAsset(side, { name: pick, position: 'PICK', value: PICK_VALUES_2QB[pick] });
+    c.appendChild(btn);
+  });
+}
+
+// ── Mode toggle ───────────────────────────────────────────────────────────
+function setMode(n) {
+  tradeMode = n;
+  document.getElementById('btn2way').classList.toggle('active', n === 2);
+  document.getElementById('btn3way').classList.toggle('active', n === 3);
+  const builder = document.getElementById('tradeBuilder');
+  const sideC = document.getElementById('sideC');
+  const arrow3 = document.getElementById('arrow3');
+  const labelB = document.getElementById('labelB');
+  if (n === 3) {
+    builder.classList.add('three-way');
+    sideC.style.display = '';
+    arrow3.style.display = '';
+    labelB.textContent = 'GIVES';
+  } else {
+    builder.classList.remove('three-way');
+    sideC.style.display = 'none';
+    arrow3.style.display = 'none';
+    labelB.textContent = 'GIVES';
+    tradeC = [];
+    document.getElementById('oppRosterC').style.display = 'none';
+  }
+  renderTrade();
+}
+
+// ── Add / Remove Assets ───────────────────────────────────────────────────
+function showAddSideModal(player) {
+  addAsset('you', player);
+}
+
+function getArr(side) {
+  if (side === 'you') return tradeYou;
+  if (side === 'them') return tradeThem;
+  return tradeC;
+}
+
+function setArr(side, arr) {
+  if (side === 'you') tradeYou = arr;
+  else if (side === 'them') tradeThem = arr;
+  else tradeC = arr;
+}
+
+function addAsset(side, asset) {
+  const arr = getArr(side);
+  if (arr.find(a => a.name === asset.name)) return;
+  // Default destination: the other team(s)
+  const defaultTo = side === 'you' ? 'them' : side === 'them' ? 'you' : 'you';
+  arr.push({...asset, to: defaultTo});
+  setArr(side, arr);
+  renderTrade();
+}
+
+function removeAsset(side, name) {
+  setArr(side, getArr(side).filter(a => a.name !== name));
+  renderTrade();
+}
+
+function clearSide(side) {
+  setArr(side, []);
+  renderTrade();
+}
+
+function renderTrade() {
+  renderSide('youGiveAssets', tradeYou, 'you');
+  renderSide('youGetAssets', tradeThem, 'them');
+  renderSide('teamCAssets', tradeC, 'c');
+
+  const giveVal = tradeYou.reduce((s,a) => s + (a.value||0), 0);
+  const getVal  = tradeThem.reduce((s,a) => s + (a.value||0), 0);
+  const cVal    = tradeC.reduce((s,a) => s + (a.value||0), 0);
+
+  document.getElementById('youGiveVal').textContent = giveVal.toLocaleString();
+  document.getElementById('youGetVal').textContent  = getVal.toLocaleString();
+  document.getElementById('teamCVal').textContent   = cVal.toLocaleString();
+}
+
+function setDest(side, name, dest) {
+  const arr = getArr(side);
+  const asset = arr.find(a => a.name === name);
+  if (asset) { asset.to = dest; setArr(side, arr); renderTrade(); }
+}
+
+function renderSide(containerId, assets, side) {
+  const el = document.getElementById(containerId);
+  if (!assets.length) {
+    el.innerHTML = '<div class="empty-state">Add players or picks below</div>';
+    return;
+  }
+  el.innerHTML = '';
+
+  // Labels for destination buttons
+  const userA = document.getElementById('userA')?.value.trim() || 'You';
+  const userB = document.getElementById('userB')?.value.trim() || 'Team B';
+  const userC = document.getElementById('userC')?.value.trim() || 'Team C';
+  const destLabels = { you: userA, them: userB, c: userC };
+
+  // Which destinations are available (exclude self)
+  const dests = tradeMode === 3
+    ? ['you','them','c'].filter(d => d !== side)
+    : ['you','them'].filter(d => d !== side);
+
+  assets.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'asset-item';
+    const safeName = a.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const raHtml = a.raValue != null
+      ? `<span class="dp-val">RA ${a.raValue.toLocaleString()}${a.raRank ? ' <span style="opacity:0.5;font-size:9px;">#'+a.raRank+'</span>' : ''}</span>`
+      : `<span class="dp-val" style="opacity:0.3;">RA —</span>`;
+    const fcHtml = a.position === 'PICK'
+      ? `<span class="fc-val">${a.value.toLocaleString()}</span>`
+      : `<span class="fc-val">FC ${a.value ? a.value.toLocaleString() : '—'}</span>`;
+
+    // Destination buttons — only show in 3-way mode (in 2-way it's always the other team)
+    const destHtml = tradeMode === 3 ? `
+      <span class="dest-label">→ SEND TO</span>
+      <div class="asset-dest">
+        ${dests.map(d => `
+          <button class="dest-btn ${a.to === d ? 'active-'+d : ''}"
+            onclick="setDest('${side}','${safeName}','${d}')">
+            → ${destLabels[d] || d}
+          </button>`).join('')}
+      </div>` : '';
+
+    div.innerHTML = `
+      <div class="asset-item-top">
+        <span class="asset-pos pos-${a.position}">${a.position}</span>
+        <span class="asset-name">${a.name}</span>
+      </div>
+      <div class="asset-item-vals">${raHtml}${fcHtml}</div>
+      ${destHtml}
+      <button class="asset-remove" onclick="removeAsset('${side}', '${safeName}')">✕</button>`;
+    el.appendChild(div);
+  });
+}
+
+// ── Player Search ─────────────────────────────────────────────────────────
+function getOwnerForName(normalizedName) {
+  // Direct map first (most reliable)
+  if (ownerByName[normalizedName]) return ownerByName[normalizedName];
+  // Fallback via sleeper ID
+  const pid = nameToSleeperId[normalizedName];
+  if (!pid) return null;
+  return playerOwnerMap[pid] || null;
+}
+
+function searchPlayers(query, side) {
+  const idMap    = { you: 'resultsYou', them: 'resultsThem', c: 'resultsC' };
+  const inputMap = { you: 'searchYou',  them: 'searchThem',  c: 'searchC'  };
+  const el = document.getElementById(idMap[side]);
+
+  if (!query || query.length < 2) { el.classList.remove('open'); return; }
+
+  const q = query.toLowerCase();
+  const seen = new Set();
+  const matches = [];
+
+  // ── Pick matches first (e.g. "2027", "early", "1st") ──
+  Object.entries(PICK_VALUES_2QB)
+    .filter(([name]) => name.toLowerCase().includes(q))
+    .forEach(([name, value]) => {
+      matches.push({ key: name, displayName: name, position: 'PICK', fcValue: value, raValue: null, raRank: null, owner: null, isPick: true });
+      seen.add(name);
+    });
+
+  // ── FC player matches ──
+  Object.entries(fcByName)
+    .filter(([k]) => k.includes(q))
+    .forEach(([key, data]) => {
+      const ra = raByName[key];
+      const owner = getOwnerForName(key);
+      matches.push({ key, displayName: data.displayName, position: data.position, fcValue: data.value, raValue: ra ? ra.value : null, raRank: ra ? ra.rank : null, owner, isPick: false });
+      seen.add(key);
+    });
+
+  // ── RA-only player matches ──
+  Object.entries(raByName)
+    .filter(([k]) => k.includes(q) && !seen.has(k))
+    .forEach(([key, data]) => {
+      const owner = getOwnerForName(key);
+      matches.push({ key, displayName: data.displayName, position: data.position, fcValue: 0, raValue: data.value, raRank: data.rank, owner, isPick: false });
+    });
+
+  // Sort: picks first if query looks like a pick, else by value
+  matches.sort((a, b) => {
+    if (a.isPick && !b.isPick) return -1;
+    if (!a.isPick && b.isPick) return 1;
+    return (b.fcValue || b.raValue || 0) - (a.fcValue || a.raValue || 0);
+  });
+
+  const top = matches.slice(0, 12);
+  if (!top.length) { el.classList.remove('open'); return; }
+
+  el.innerHTML = '';
+  top.forEach(data => {
+    const div = document.createElement('div');
+    div.className = 'search-result-item';
+    const raSpan = (!data.isPick && data.raValue != null) ? `<span class="result-dp">RA ${data.raValue.toLocaleString()}</span>` : '';
+    const fcSpan = data.fcValue ? `<span class="result-value">FC ${data.fcValue.toLocaleString()}</span>` : '';
+    const ownerTag = data.owner ? `<span class="owner-tag">@${data.owner.username}</span>` : '';
+
+    div.innerHTML = `
+      <div class="search-result-top">
+        <span class="asset-pos pos-${data.position}">${data.position}</span>
+        <span style="flex:1;font-weight:500;">${data.displayName}</span>
+        ${ownerTag}
+      </div>
+      ${(raSpan || fcSpan) ? `<div class="search-result-vals">${raSpan}${fcSpan}</div>` : ''}`;
+
+    div.onclick = async (e) => {
+      e.stopPropagation();
+      // Always add the player immediately
+      addAsset(side, { name: data.displayName, position: data.position, value: data.fcValue, raValue: data.raValue, raRank: data.raRank });
+      document.getElementById(inputMap[side]).value = '';
+      el.classList.remove('open');
+
+      // If owned and not already loaded for this column, silently load their roster
+      if (data.owner && !data.isPick) {
+        const userInputId = side === 'you' ? 'userA' : side === 'them' ? 'userB' : 'userC';
+        const currentUser = document.getElementById(userInputId).value.trim();
+        if (currentUser.toLowerCase() !== data.owner.username.toLowerCase()) {
+          document.getElementById(userInputId).value = data.owner.username;
+          loadSideRoster(side); // no await — loads in background
+        }
+      }
+    };
+
+    el.appendChild(div);
+  });
+
+  el.classList.add('open');
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) {
+    document.querySelectorAll('.search-results').forEach(el => el.classList.remove('open'));
+  }
+});
+
+// ── Analyse ───────────────────────────────────────────────────────────────
+function analyseTrade() {
+  const giveVal = tradeYou.reduce((s,a) => s + (a.value||0), 0);
+  const getVal  = tradeThem.reduce((s,a) => s + (a.value||0), 0);
+  const cVal    = tradeC.reduce((s,a) => s + (a.value||0), 0);
+
+  if (!tradeYou.length && !tradeThem.length) {
+    setStatus('Add some players to both sides first!', 'error'); return;
+  }
+
+  const panel = document.getElementById('verdictPanel');
+  panel.classList.add('visible');
+
+  if (tradeMode === 2) {
+    // ── 2-way verdict ──
+    const diff = getVal - giveVal;
+    const total = giveVal + getVal || 1;
+    const threshold = total * 0.04;
+    let verdict, color;
+    if (diff > threshold)       { verdict = 'YOU WIN';  color = 'WIN';  }
+    else if (diff < -threshold) { verdict = 'YOU LOSE'; color = 'LOSE'; }
+    else                        { verdict = 'EVEN';     color = 'EVEN'; }
+
+    document.getElementById('verdictResult').textContent = verdict;
+    document.getElementById('verdictResult').className = `verdict-result verdict-${color}`;
+    const sign = diff >= 0 ? '+' : '';
+    document.getElementById('verdictDiff').textContent = `${sign}${diff.toLocaleString()} value`;
+    document.getElementById('verdictDiff').style.color = diff > 0 ? 'var(--win)' : diff < 0 ? 'var(--lose)' : 'var(--even)';
+
+    const getPct = Math.round((getVal / total) * 100);
+    const bar = document.getElementById('verdictBar');
+    bar.style.width = getPct + '%';
+    bar.style.background = getPct > 54 ? 'var(--win)' : getPct < 46 ? 'var(--lose)' : 'var(--even)';
+
+    document.getElementById('brkGive').textContent = giveVal.toLocaleString();
+    document.getElementById('brkGet').textContent  = getVal.toLocaleString();
+    const pct = giveVal > 0 ? Math.round((getVal / giveVal) * 100) : '—';
+    document.getElementById('brkPct').textContent = pct + '%';
+    document.getElementById('brkPct').style.color = pct > 104 ? 'var(--win)' : pct < 96 ? 'var(--lose)' : 'var(--even)';
+
+    document.getElementById('verdictExtra').innerHTML = '';
+
+  } else {
+    // Each team's NET = value of assets they RECEIVE minus value they GIVE
+    const allAssets = [
+      ...tradeYou.map(a => ({ ...a, from: 'you' })),
+      ...tradeThem.map(a => ({ ...a, from: 'them' })),
+      ...tradeC.map(a => ({ ...a, from: 'c' })),
+    ];
+
+    const received = { you: 0, them: 0, c: 0 };
+    const sent     = { you: 0, them: 0, c: 0 };
+
+    allAssets.forEach(a => {
+      const val = a.value || 0;
+      sent[a.from] += val;
+      const dest = a.to || (a.from === 'you' ? 'them' : 'you');
+      received[dest] += val;
+    });
+
+    const netYou  = received.you  - sent.you;
+    const netB    = received.them - sent.them;
+    const netC    = received.c    - sent.c;
+
+    const userA = document.getElementById('userA')?.value.trim() || 'YOU';
+    const userB = document.getElementById('userB')?.value.trim() || 'TEAM B';
+    const userC = document.getElementById('userC')?.value.trim() || 'TEAM C';
+
+    const nets = [
+      { label: userA, net: netYou, color: 'var(--accent)'  },
+      { label: userB, net: netB,   color: 'var(--accent2)' },
+      { label: userC, net: netC,   color: '#b464ff'        },
+    ].sort((a,b) => b.net - a.net);
+
+    const winner = nets[0];
+    const isYouWinner = winner.label === userA;
+    let verdict = isYouWinner ? 'YOU WIN' : `${winner.label} WINS`;
+    let color = isYouWinner ? 'WIN' : 'LOSE';
+    const maxNet = Math.max(Math.abs(netYou), Math.abs(netB), Math.abs(netC));
+    if (maxNet < 300) { verdict = 'EVEN'; color = 'EVEN'; }
+
+    document.getElementById('verdictResult').textContent = verdict;
+    document.getElementById('verdictResult').className = `verdict-result verdict-${color}`;
+    document.getElementById('verdictDiff').textContent = `Your net: ${netYou >= 0 ? '+' : ''}${netYou.toLocaleString()}`;
+    document.getElementById('verdictDiff').style.color = netYou > 300 ? 'var(--win)' : netYou < -300 ? 'var(--lose)' : 'var(--even)';
+
+    const totalCirc = sent.you + sent.them + sent.c || 1;
+    const bar = document.getElementById('verdictBar');
+    bar.style.width = Math.min(Math.round((received.you / totalCirc) * 100 * 1.5), 100) + '%';
+    bar.style.background = netYou > 300 ? 'var(--win)' : netYou < -300 ? 'var(--lose)' : 'var(--even)';
+
+    document.getElementById('brkGive').textContent = sent.you.toLocaleString();
+    document.getElementById('brkGet').textContent  = received.you.toLocaleString();
+    const pct = sent.you > 0 ? Math.round((received.you / sent.you) * 100) : '—';
+    document.getElementById('brkPct').textContent = typeof pct === 'number' ? pct + '%' : pct;
+    document.getElementById('brkPct').style.color = pct > 104 ? 'var(--win)' : pct < 96 ? 'var(--lose)' : 'var(--even)';
+    document.getElementById('brkGiveLabel').textContent = 'YOU GIVE';
+    document.getElementById('brkGetLabel').textContent  = 'YOU GET';
+    document.getElementById('brkPctLabel').textContent  = 'VALUE %';
+
+    document.getElementById('verdictExtra').innerHTML = `
+      <div style="margin-top:16px;display:flex;justify-content:center;gap:24px;font-family:'DM Mono',monospace;font-size:12px;">
+        ${nets.map(t => `<div style="text-align:center;">
+          <div style="font-size:16px;font-weight:600;color:${t.color};">${t.net >= 0 ? '+' : ''}${t.net.toLocaleString()}</div>
+          <div style="color:var(--muted);font-size:10px;letter-spacing:1px;margin-top:2px;">${t.label} NET</div>
+        </div>`).join('')}
+      </div>`;
+  }
+
+  renderTradeFlow();
+  renderBalanceSuggestion();
+  runLiveTradeAI();
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Trade Flow ────────────────────────────────────────────────────────────
+function renderTradeFlow() {
+  const userA = document.getElementById('userA')?.value.trim() || 'You';
+  const userB = document.getElementById('userB')?.value.trim() || 'Team B';
+  const userC = document.getElementById('userC')?.value.trim() || 'Team C';
+  const labels = { you: userA, them: userB, c: userC };
+  const colors = { you: 'var(--accent)', them: 'var(--accent2)', c: '#b464ff' };
+
+  // Group assets by from→to
+  const flows = {};
+  const allAssets = [
+    ...tradeYou.map(a => ({ ...a, from: 'you' })),
+    ...tradeThem.map(a => ({ ...a, from: 'them' })),
+    ...tradeC.map(a => ({ ...a, from: 'c' })),
+  ];
+
+  allAssets.forEach(a => {
+    const dest = tradeMode === 2
+      ? (a.from === 'you' ? 'them' : 'you')
+      : (a.to || (a.from === 'you' ? 'them' : 'you'));
+    const key = `${a.from}|${dest}`;
+    if (!flows[key]) flows[key] = { from: a.from, to: dest, assets: [] };
+    flows[key].assets.push(a);
+  });
+
+  const rows = Object.values(flows);
+  const flowEl = document.getElementById('tradeFlow');
+  if (!rows.length) { flowEl.style.display = 'none'; return; }
+
+  flowEl.style.display = 'block';
+  const container = document.getElementById('tradeFlowRows');
+  container.innerHTML = '';
+
+  rows.forEach(row => {
+    const div = document.createElement('div');
+    div.className = 'trade-flow-row';
+    const chips = row.assets.map(a => {
+      const val = a.value ? ` <span class="flow-val">FC ${a.value.toLocaleString()}</span>` : '';
+      return `<span class="flow-player-chip"><span class="asset-pos pos-${a.position}" style="margin-right:2px;font-size:9px;">${a.position}</span>${a.name}${val}</span>`;
+    }).join('');
+    div.innerHTML = `
+      <span class="flow-from" style="color:${colors[row.from]}">${labels[row.from]}</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-to" style="color:${colors[row.to]}">${labels[row.to]}</span>
+      <div class="flow-players">${chips}</div>`;
+    container.appendChild(div);
+  });
+}
+
+// ── Balance Suggestion ────────────────────────────────────────────────────
+function renderBalanceSuggestion() {
+  const userA = document.getElementById('userA')?.value.trim() || 'You';
+  const userB = document.getElementById('userB')?.value.trim() || 'Team B';
+  const userC = document.getElementById('userC')?.value.trim() || 'Team C';
+  const nameMap  = { you: userA, them: userB, c: userC };
+  const colorMap = { you: 'var(--accent)', them: 'var(--accent2)', c: '#b464ff' };
+
+  const allAssets = [
+    ...tradeYou.map(a => ({ ...a, from: 'you' })),
+    ...tradeThem.map(a => ({ ...a, from: 'them' })),
+    ...tradeC.map(a => ({ ...a, from: 'c' })),
+  ];
+
+  const received = { you: 0, them: 0, c: 0 };
+  const sent     = { you: 0, them: 0, c: 0 };
+  allAssets.forEach(a => {
+    const val = a.value || 0;
+    sent[a.from] += val;
+    const dest = tradeMode === 2
+      ? (a.from === 'you' ? 'them' : 'you')
+      : (a.to || (a.from === 'you' ? 'them' : 'you'));
+    received[dest] += val;
+  });
+
+  const nets = { you: received.you - sent.you, them: received.them - sent.them, c: received.c - sent.c };
+  const threshold = 400;
+  const activeSides = tradeMode === 2 ? ['you','them'] : ['you','them','c'];
+  const losers  = activeSides.filter(s => nets[s] < -threshold).sort((a,b) => nets[a]-nets[b]);
+  const winners = activeSides.filter(s => nets[s] >  threshold).sort((a,b) => nets[b]-nets[a]);
+
+  const section = document.getElementById('balanceSection');
+  const box     = document.getElementById('balanceText');
+  section.style.display = 'block';
+
+  if (!losers.length) {
+    box.innerHTML = `<div class="balance-box"><strong>✓ TRADE IS BALANCED</strong><br><span style="color:var(--muted);font-size:12px;">All teams within ${threshold} value of each other.</span></div>`;
+    return;
+  }
+
+  let html = `<div class="balance-box">`;
+  losers.forEach(side => {
+    const shortfall = Math.abs(nets[side]);
+    const winnerSide = winners[0];
+    html += `<div style="margin-bottom:8px;"><strong style="color:${colorMap[side]}">@${nameMap[side]}</strong> <span style="color:var(--muted);font-size:12px;">is short</span> <strong style="color:var(--lose);">${shortfall.toLocaleString()}</strong> <span style="color:var(--muted);font-size:12px;">in value</span></div>`;
+
+    if (winnerSide) {
+      html += `<div style="font-size:11px;color:var(--muted);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;">To balance — <span style="color:${colorMap[winnerSide]}">@${nameMap[winnerSide]}</span> could add:</div>`;
+    }
+
+    // Pick suggestions
+    const pickMatches = Object.entries(PICK_VALUES_2QB)
+      .map(([name, val]) => ({ name, val }))
+      .filter(p => p.val >= shortfall * 0.65 && p.val <= shortfall * 1.45)
+      .slice(0, 3);
+
+    // Player suggestions from your roster if you're the winner
+    const playerMatches = (winnerSide === 'you' ? myRoster : [])
+      .filter(p => p.value >= shortfall * 0.55 && p.value <= shortfall * 1.5)
+      .slice(0, 2);
+
+    playerMatches.forEach(p => {
+      html += `<div class="balance-option">+ ${p.name} <span class="bal-val">FC ${p.value.toLocaleString()}</span></div>`;
+    });
+    pickMatches.forEach(p => {
+      html += `<div class="balance-option">+ ${p.name} <span class="bal-val">${p.val.toLocaleString()}</span></div>`;
+    });
+    if (!pickMatches.length && !playerMatches.length) {
+      html += `<div class="balance-option" style="color:var(--muted);">Add a player or pick worth ~${shortfall.toLocaleString()}</div>`;
+    }
+  });
+  html += `</div>`;
+  box.innerHTML = html;
+}
+
+// ── Tab Navigation ────────────────────────────────────────────────────────
+function showTab(name) {
+  ['trade','finder','buysell','waiver','history','rankings'].forEach(t => {
+    const el = document.getElementById(`tab-${t}`);
+    if (el) el.style.display = t === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', ['trade','finder','buysell','waiver','history','rankings'][i] === name);
+  });
+  if (name === 'history'  && !document.querySelector('.history-card'))    loadTradeHistory();
+  if (name === 'rankings' && !document.querySelector('.rankings-row:not(.header)')) loadLeagueRankings();
+  if (name === 'finder'   && !document.querySelector('.finder-card'))     loadTradeFinder();
+  if (name === 'buysell'  && !document.querySelector('.buysell-row'))     loadBuySell();
+  if (name === 'waiver'   && !document.querySelector('.waiver-row'))      loadWaiverWire();
+}
+
+// ── Trade History ─────────────────────────────────────────────────────────
+async function loadTradeHistory() {
+  const leagueId = document.getElementById('leagueSelect').value;
+  if (!leagueId) { document.getElementById('historyList').innerHTML = '<div class="empty-state" style="padding:40px;">Load your league first.</div>'; return; }
+
+  document.getElementById('historyList').innerHTML = '<div class="empty-state" style="padding:40px;"><span class="spinner"></span> Loading trade history…</div>';
+
+  try {
+    // Fetch all transactions for all weeks (1–18)
+    const weeks = Array.from({length: 18}, (_, i) => i + 1);
+    const results = await Promise.all(weeks.map(w =>
+      fetch(`https://api.sleeper.app/v1/league/${leagueId}/transactions/${w}`).then(r => r.json()).catch(() => [])
+    ));
+
+    const trades = results.flat()
+      .filter(t => t.type === 'trade' && t.status === 'complete')
+      .sort((a, b) => b.created - a.created);
+
+    if (!trades.length) {
+      document.getElementById('historyList').innerHTML = '<div class="empty-state" style="padding:40px;">No completed trades found this season.</div>';
+      return;
+    }
+
+    renderTradeHistory(trades);
+  } catch(e) {
+    document.getElementById('historyList').innerHTML = `<div class="empty-state" style="padding:40px;">Error: ${e.message}</div>`;
+  }
+}
+
+function renderTradeHistory(trades) {
+  const container = document.getElementById('historyList');
+  container.innerHTML = '';
+
+  trades.forEach((trade, idx) => {
+    const date = new Date(trade.created).toLocaleDateString('en-IE', {day:'numeric', month:'short', year:'numeric'});
+    // Get usernames using the reliable rosterIdToUsername map
+    const sides = (trade.roster_ids || []).map(rid => {
+      const roster = allRosters.find(r => r.roster_id === rid);
+      const username = rosterIdToUsername[rid] || `Team ${rid}`;
+      return { rosterId: rid, username, ownerId: roster?.owner_id };
+    });
+
+    // Build assets per side
+    const adds = trade.adds || {};   // player_id → roster_id (receiving)
+    const drops = trade.drops || {}; // player_id → roster_id (sending)
+    const draftPicks = trade.draft_picks || [];
+
+    const sideAssets = {};
+    sides.forEach(s => { sideAssets[s.rosterId] = { gives: [], gets: [] }; });
+
+    // Players: key=player_id, val=roster_id that receives them
+    Object.entries(adds).forEach(([pid, toRosterId]) => {
+      const p = playerData[pid];
+      const name = p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : `Player ${pid}`;
+      const pos = p?.position || '?';
+      const fc = fcLookup(name);
+      const val = fc?.value || 0;
+      if (sideAssets[toRosterId]) sideAssets[toRosterId].gets.push({ name, pos, val });
+      // The other side gave this player
+      const fromRosterId = drops[pid];
+      if (fromRosterId && sideAssets[fromRosterId]) sideAssets[fromRosterId].gives.push({ name, pos, val });
+    });
+
+    // Draft picks
+    draftPicks.forEach(pick => {
+      const label = `${pick.season} Round ${pick.round} Pick`;
+      const pickVal = estimatePickValue(pick.round, pick.season);
+      // previous_owner_id = the team sending the pick (giving it away)
+      // owner_id = the team receiving the pick (getting it)
+      if (sideAssets[pick.previous_owner_id]) sideAssets[pick.previous_owner_id].gives.push({ name: label, pos: 'PICK', val: pickVal });
+      if (sideAssets[pick.owner_id]) sideAssets[pick.owner_id].gets.push({ name: label, pos: 'PICK', val: pickVal });
+    });
+
+    // Calculate net for each side
+    sides.forEach(s => {
+      const assets = sideAssets[s.rosterId] || { gives: [], gets: [] };
+      s.giveVal = assets.gives.reduce((sum, a) => sum + a.val, 0);
+      s.getVal  = assets.gets.reduce((sum, a) => sum + a.val, 0);
+      s.net     = s.getVal - s.giveVal;
+    });
+
+    // Find you
+    const mySide = sides.find(s => s.ownerId === userId);
+    const myNet  = mySide ? mySide.net : 0;
+    const verdictClass = myNet > 400 ? 'win' : myNet < -400 ? 'lose' : 'even';
+    const verdictText  = myNet > 400 ? `+${myNet.toLocaleString()}` : myNet < -400 ? `${myNet.toLocaleString()}` : 'EVEN';
+
+    const card = document.createElement('div');
+    card.className = 'history-card';
+
+    const teamStr = sides.map(s => `@${s.username}`).join(' ↔ ');
+    card.innerHTML = `
+      <div class="history-header">
+        <div>
+          <div class="history-teams">${teamStr}</div>
+          <div class="history-date">${date}</div>
+        </div>
+        ${mySide ? `<span class="history-verdict ${verdictClass}">${verdictText}</span>` : ''}
+      </div>
+      <div class="history-sides">
+        ${sides.map(s => {
+          const assets = sideAssets[s.rosterId] || { gives: [], gets: [] };
+          return `<div class="history-side">
+            <div class="history-side-label" style="color:var(--accent2);">@${s.username} GIVES</div>
+            ${assets.gives.map(a => `
+              <div class="history-player">
+                <span class="asset-pos pos-${a.pos}" style="font-size:9px;">${a.pos}</span>
+                <span>${a.name}</span>
+                ${a.val ? `<span class="history-val">FC ${a.val.toLocaleString()}</span>` : ''}
+              </div>`).join('') || '<div style="color:var(--muted);font-size:12px;">—</div>'}
+          </div>`;
+        }).join('')}
+      </div>
+      <button class="ai-btn" onclick="runAIAnalysis(this, ${idx})">✦ AI Analysis</button>
+      <div class="ai-analysis" id="ai-${idx}"></div>`;
+
+    // Store trade data for AI analysis
+    card._tradeData = { sides, sideAssets, date };
+    card.dataset.tradeIdx = idx;
+    container.appendChild(card);
+
+    // Store for AI lookup
+    window._trades = window._trades || {};
+    window._trades[idx] = { sides, sideAssets, date, teamStr };
+  });
+}
+
+function estimatePickValue(round, season) {
+  const yr = parseInt(season) || 2027;
+  const currentYr = 2026;
+  const yearDiscount = Math.max(0, yr - currentYr);
+  const base = round === 1 ? 4500 : round === 2 ? 2000 : round === 3 ? 800 : 400;
+  return Math.round(base * Math.pow(0.75, yearDiscount));
+}
+
+// ── AI Analyst (local rule-based, works offline) ──────────────────────────
+async function runAIAnalysis(btn, idx) {
+  const el = document.getElementById(`ai-${idx}`);
+  const trade = window._trades?.[idx];
+  if (!trade) return;
+
+  btn.textContent = '✦ Analysing…';
+  btn.disabled = true;
+  el.classList.add('visible');
+  el.textContent = '';
+
+  // Give the UI a tick to update before heavy work
+  await new Promise(r => setTimeout(r, 50));
+
+  try {
+    const text = generateTradeAnalysis(trade);
+    el.textContent = text;
+    btn.textContent = '✦ Analysis Done';
+  } catch(e) {
+    el.textContent = 'Analysis failed.';
+    btn.textContent = '✦ AI Analysis';
+    btn.disabled = false;
+  }
+}
+
+function getRosterProfile(rosterId) {
+  // Build a profile of a team's current roster from allRosters + playerData + raByName
+  const roster = allRosters.find(r => r.roster_id === rosterId);
+  if (!roster) return null;
+  const players = rosterToPlayers(roster.players || []);
+
+  const qbs = players.filter(p => p.position === 'QB').sort((a,b) => b.value - a.value);
+  const rbs = players.filter(p => p.position === 'RB').sort((a,b) => b.value - a.value);
+  const wrs = players.filter(p => p.position === 'WR').sort((a,b) => b.value - a.value);
+  const tes = players.filter(p => p.position === 'TE').sort((a,b) => b.value - a.value);
+
+  const totalVal = players.reduce((s,p) => s + (p.value||0), 0);
+  const qbVal    = qbs.reduce((s,p) => s + (p.value||0), 0);
+
+  // QB tier assessment for 2QB league
+  const qb1Val = qbs[0]?.value || 0;
+  const qb2Val = qbs[1]?.value || 0;
+  const qbTier = qb1Val > 7000 ? 'elite' : qb1Val > 4000 ? 'strong' : qb1Val > 2000 ? 'average' : 'weak';
+  const qb2Tier = qb2Val > 4000 ? 'strong' : qb2Val > 2000 ? 'average' : qb2Val > 500 ? 'weak' : 'missing';
+
+  // Contender vs rebuilder
+  const top8Val = players.slice(0,8).reduce((s,p) => s+(p.value||0), 0);
+  const phase = top8Val > 40000 ? 'contending' : top8Val > 25000 ? 'competing' : top8Val > 15000 ? 'rebuilding' : 'full rebuild';
+
+  // Age curve — use raByName rank as proxy for youth (lower rank = higher value = often younger)
+  const youngStars = players.filter(p => p.raRank && p.raRank <= 50 && p.value > 3000);
+  const agingVets  = players.filter(p => p.raValue && p.value && (p.value - p.raValue) > 1500); // FC > RA = aging
+
+  return { qbs, rbs, wrs, tes, totalVal, qbVal, qb1Val, qb2Val, qbTier, qb2Tier, phase, youngStars, agingVets, top8Val };
+}
+
+function generateTradeAnalysis(trade) {
+  const { sides, sideAssets, date } = trade;
+  const lines = [];
+
+  // Build full picture for each side
+  const summaries = sides.map(s => {
+    const assets = sideAssets[s.rosterId] || { gives: [], gets: [] };
+    const giveVal    = assets.gives.reduce((sum, a) => sum + a.val, 0);
+    const getVal     = assets.gets.reduce((sum, a) => sum + a.val, 0);
+    const net        = getVal - giveVal;
+    const givesQBs   = assets.gives.filter(a => a.pos === 'QB');
+    const getsQBs    = assets.gets.filter(a => a.pos === 'QB');
+    const givesRBs   = assets.gives.filter(a => a.pos === 'RB');
+    const getsRBs    = assets.gets.filter(a => a.pos === 'RB');
+    const givesWRs   = assets.gives.filter(a => a.pos === 'WR');
+    const getsWRs    = assets.gets.filter(a => a.pos === 'WR');
+    const givesPicks = assets.gives.filter(a => a.pos === 'PICK');
+    const getsPicks  = assets.gets.filter(a => a.pos === 'PICK');
+    const profile    = getRosterProfile(s.rosterId); // pre-trade roster
+
+    return { ...s, assets, giveVal, getVal, net, givesQBs, getsQBs, givesRBs, getsRBs,
+             givesWRs, getsWRs, givesPicks, getsPicks, profile };
+  });
+
+  const [sideA, sideB] = summaries;
+  const diff = Math.abs((sideA.net || 0) - (sideB?.net || 0));
+  const winner = summaries.reduce((best, s) => s.net > best.net ? s : best, summaries[0]);
+  const loser  = summaries.reduce((worst, s) => s.net < worst.net ? s : worst, summaries[0]);
+
+  // ── OPENING: value verdict + context ──
+  const isFair     = diff < 500;
+  const isLopsided = diff > 2000;
+
+  if (isFair) {
+    lines.push(`On raw value, this is a fair swap between ${sides.map(s=>s.username).join(' and ')} on ${date}. The value difference is negligible — this trade was driven by roster fit and positional need, which is exactly how dynasty trades should work.`);
+  } else if (isLopsided) {
+    lines.push(`${winner.username} comes out significantly ahead on paper in this trade on ${date}, netting roughly ${diff.toLocaleString()} in value over ${loser.username}. That said, in dynasty — and especially in a 2QB Superflex league — raw value doesn't tell the whole story.`);
+  } else {
+    lines.push(`${winner.username} edges this trade on ${date} with a net gain of around ${diff.toLocaleString()} in value. It's a reasonable deal but worth examining how the assets fit each roster.`);
+  }
+
+  // ── PER-SIDE: roster fit analysis ──
+  summaries.forEach(s => {
+    if (!s.profile) return;
+    const { qbTier, qb2Tier, phase, youngStars, agingVets } = s.profile;
+    const parts = [];
+
+    // What they gave
+    const gave = s.assets.gives.map(a => a.name).filter(Boolean);
+    const got  = s.assets.gets.map(a => a.name).filter(Boolean);
+    parts.push(`${s.username} sent ${gave.join(', ') || 'nothing'} and received ${got.join(', ') || 'nothing'}.`);
+
+    // QB situation context (critical in 2QB)
+    if (s.givesQBs.length > 0 && s.getsQBs.length === 0) {
+      parts.push(`Dealing away ${s.givesQBs.map(q=>q.name).join(' and ')} without a QB return is a bold move in a 2QB league — quarterback scarcity is real, and losing a starter without a replacement puts them under pressure at that position.`);
+    } else if (s.getsQBs.length > 0 && s.givesQBs.length === 0) {
+      if (qbTier === 'weak' || qb2Tier === 'missing' || qb2Tier === 'weak') {
+        parts.push(`Acquiring ${s.getsQBs.map(q=>q.name).join(' and ')} addresses a genuine need — their QB room was thin coming into this deal, and in 2QB Superflex that's a critical upgrade regardless of what the values say.`);
+      } else {
+        parts.push(`Adding ${s.getsQBs.map(q=>q.name).join(' and ')} bolsters an already solid QB room. In Superflex, QB depth is never wasted, but they need to ensure the rest of the roster can support a contending window.`);
+      }
+    } else if (s.givesQBs.length > 0 && s.getsQBs.length > 0) {
+      const gaveVal = s.givesQBs.reduce((sum,q)=>sum+q.val,0);
+      const gotVal  = s.getsQBs.reduce((sum,q)=>sum+q.val,0);
+      if (gotVal > gaveVal + 1000) {
+        parts.push(`The QB swap heavily favours ${s.username} — they upgraded at the most valuable position in Superflex.`);
+      } else if (gaveVal > gotVal + 1000) {
+        parts.push(`Downgrading at QB is a dangerous move in a 2QB league. ${s.username} will need the rest of the haul to compensate for losing quarterback production.`);
+      } else {
+        parts.push(`This is essentially a lateral move at QB. The value returned elsewhere in the deal will determine whether it was worth making.`);
+      }
+    }
+
+    // RB/WR positional fit
+    if (s.getsRBs.length > 0) {
+      const rbNames = s.getsRBs.map(r=>r.name).join(' and ');
+      if (phase === 'contending' || phase === 'competing') {
+        parts.push(`Adding ${rbNames} fits the contending timeline — RBs typically have shorter peak windows in dynasty and are more valuable now than later.`);
+      } else {
+        parts.push(`Picking up ${rbNames} while in a ${phase} phase raises a question mark — RBs are less ideal in a rebuild given their shorter career arcs.`);
+      }
+    }
+
+    if (s.getsWRs.length > 0) {
+      const wrNames = s.getsWRs.map(w=>w.name).join(' and ');
+      const wrVals  = s.getsWRs.map(w=>w.val);
+      const youngWRs = s.getsWRs.filter(w => {
+        const ra = raByName[w.name.toLowerCase().replace(/[^a-z ]/g,'')];
+        return ra && ra.rank <= 30;
+      });
+      if (youngWRs.length) {
+        parts.push(`${youngWRs.map(w=>w.name).join(' and ')} ${youngWRs.length > 1 ? 'are' : 'is'} genuinely young dynasty assets with long runway — exactly what you want to acquire regardless of current team phase.`);
+      } else {
+        parts.push(`The WR ${s.getsWRs.length > 1 ? 'additions' : 'addition'} of ${wrNames} ${phase === 'rebuilding' || phase === 'full rebuild' ? 'makes sense as depth pieces, though ideally a rebuild targets younger upside.' : 'slots in as needed production.'}`);
+      }
+    }
+
+    // Picks
+    if (s.givesPicks.length > 0) {
+      const pickStr = s.givesPicks.map(p=>p.name).join(', ');
+      parts.push(`Sending away ${pickStr} signals a win-now mentality. That's defensible for a ${phase} roster, ${phase === 'rebuilding' || phase === 'full rebuild' ? 'but risky given they haven\'t yet built a contending core.' : 'and they have the roster to justify it.'}`);
+    }
+
+    if (s.getsPicks.length > 0) {
+      const pickStr = s.getsPicks.map(p=>p.name).join(', ');
+      parts.push(`Acquiring ${pickStr} is a clear signal they\'re thinking long-term. For a ${phase} team this makes sense — future picks give flexibility to retool through the draft.`);
+    }
+
+    lines.push(parts.join(' '));
+  });
+
+  // ── CLOSING: overall verdict ──
+  const closingParts = [];
+
+  // Phase compatibility check
+  if (summaries.length >= 2) {
+    const [a, b] = summaries;
+    const aPhase = a.profile?.phase || '';
+    const bPhase = b.profile?.phase || '';
+
+    if ((aPhase === 'contending' && (bPhase === 'rebuilding' || bPhase === 'full rebuild')) ||
+        (bPhase === 'contending' && (aPhase === 'rebuilding' || aPhase === 'full rebuild'))) {
+      const contender = aPhase.includes('contend') ? a : b;
+      const rebuilder = aPhase.includes('contend') ? b : a;
+      closingParts.push(`This has the hallmarks of a classic contender-rebuilder swap — ${contender.username} trades future capital for proven production while ${rebuilder.username} collects picks and young assets. These trades make sense when both sides are honest about their timelines.`);
+    } else if (aPhase === bPhase) {
+      closingParts.push(`Both teams are in a similar ${aPhase} phase, which makes this more of a positional realignment than a timeline trade. The team that extracted better positional value for their specific roster needs wins this one.`);
+    }
+  }
+
+  // 2QB closing thought
+  const anyQBMoved = summaries.some(s => s.givesQBs.length > 0 || s.getsQBs.length > 0);
+  if (anyQBMoved) {
+    closingParts.push(`Remember this is a 2QB Superflex league — quarterbacks are the scarcest and most valuable commodity. Any trade that meaningfully changes a team's QB room deserves more scrutiny than the raw numbers suggest, because the delta between a strong QB2 and a weak one is worth far more than most FantasyCalc values imply.`);
+  } else {
+    closingParts.push(`With no QBs changing hands, the impact here is more about positional depth than fundamental roster reshaping. In 2QB Superflex the skill position values hold relatively steady — the real question is whether the assets acquired fit the scheme and timeline of each roster.`);
+  }
+
+  if (closingParts.length) lines.push(closingParts.join(' '));
+
+  // ── PERSONALISED CONTEXT from feedback history ──
+  const personalContext = buildPersonalisedContext();
+  if (personalContext) lines.push(personalContext);
+
+  return lines.join('\n\n');
+}
+
+async function runRankingsAI(teams) {
+  const container = document.getElementById('rankingsList');
+  const aiDiv = document.createElement('div');
+  aiDiv.style.marginTop = '16px';
+  aiDiv.innerHTML = `<div class="history-card"><div class="history-header"><div class="history-teams">✦ Power Rankings Analysis</div></div><div class="ai-analysis visible" id="rankingsAI"><span class="spinner"></span> Generating…</div></div>`;
+  container.appendChild(aiDiv);
+
+  await new Promise(r => setTimeout(r, 80));
+
+  const top3 = teams.slice(0, 3);
+  const bottom3 = teams.slice(-3).reverse();
+  const maxFC = teams[0].fcTotal;
+  const minFC = teams[teams.length-1].fcTotal;
+  const gap = maxFC - minFC;
+
+  const lines = [];
+
+  lines.push(`Based on current roster values, ${top3[0].username} leads the league with ${top3[0].fcTotal.toLocaleString()} in FC value${top3[0].raTotal ? ` and ${top3[0].raTotal.toLocaleString()} in RosterAudit` : ''}, followed by ${top3[1]?.username} and ${top3[2]?.username}. These three teams represent the clear contending tier right now.`);
+
+  // FC vs RA discrepancies
+  const discrepancies = teams.filter(t => t.raTotal && Math.abs(t.fcTotal - t.raTotal) > 2000)
+    .sort((a,b) => Math.abs(b.fcTotal-b.raTotal) - Math.abs(a.fcTotal-a.raTotal))
+    .slice(0, 2);
+
+  if (discrepancies.length) {
+    const d = discrepancies[0];
+    const diff = d.fcTotal - d.raTotal;
+    lines.push(`The biggest gap between FC and RosterAudit values belongs to ${d.username}, who is rated ${Math.abs(diff).toLocaleString()} ${diff > 0 ? 'higher by FC than RA' : 'higher by RA than FC'}. ${diff > 0 ? 'This often signals a roster heavy on older veterans who still have trade value but fading dynasty upside.' : 'A positive RA vs FC gap usually means young players who are ascending faster than the trade market has caught up.'}`);
+  }
+
+  if (gap > 15000) {
+    lines.push(`There's a significant ${gap.toLocaleString()} value gap between first and last place, suggesting the league has a clear split between contenders and rebuilders. The bottom teams — ${bottom3.map(t=>t.username).join(', ')} — are likely a year or two away from competing, which may create trade opportunities for contenders looking to sell veterans for picks and youth.`);
+  } else {
+    lines.push(`The league is relatively competitive with only ${gap.toLocaleString()} separating top and bottom. In a tight league like this, roster construction decisions — particularly at QB in Superflex — are often what separates the top teams rather than raw value alone.`);
+  }
+
+  document.getElementById('rankingsAI').textContent = lines.join('\n\n');
+}
+async function loadLeagueRankings() {
+  if (!allRosters.length) {
+    document.getElementById('rankingsList').innerHTML = '<div class="empty-state" style="padding:40px;">Load your league first.</div>';
+    return;
+  }
+
+  document.getElementById('rankingsList').innerHTML = '<div class="empty-state" style="padding:40px;"><span class="spinner"></span> Calculating rankings…</div>';
+
+  // Build roster value for each team
+  const teams = allRosters.map(roster => {
+    const username = rosterIdToUsername[roster.roster_id] || `Team ${roster.roster_id}`;
+    const players = rosterToPlayers(roster.players || []);
+
+    const fcTotal = players.reduce((s, p) => s + (p.value || 0), 0);
+    const raTotal = players.reduce((s, p) => s + (p.raValue || 0), 0);
+
+    // Position breakdowns
+    const byPos = {};
+    players.forEach(p => {
+      if (!byPos[p.position]) byPos[p.position] = 0;
+      byPos[p.position] += p.value || 0;
+    });
+
+    return { username, fcTotal, raTotal, byPos, playerCount: players.length, isMe: roster.owner_id === userId };
+  });
+
+  // Sort by FC total
+  teams.sort((a, b) => b.fcTotal - a.fcTotal);
+  const maxFC = teams[0]?.fcTotal || 1;
+  const maxRA = Math.max(...teams.map(t => t.raTotal)) || 1;
+
+  const container = document.getElementById('rankingsList');
+  container.innerHTML = '';
+
+  // Table
+  const table = document.createElement('div');
+  table.className = 'rankings-table';
+
+  // Header
+  table.innerHTML = `
+    <div class="rankings-row header">
+      <div class="rankings-cell">#</div>
+      <div class="rankings-cell">TEAM</div>
+      <div class="rankings-cell rank-fc" style="text-align:right;">FC VALUE</div>
+      <div class="rankings-cell rank-ra" style="text-align:right;">RA VALUE</div>
+      <div class="rank-bar-cell"></div>
+    </div>`;
+
+  teams.forEach((team, i) => {
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const row = document.createElement('div');
+    row.className = 'rankings-row';
+    if (team.isMe) row.style.background = 'rgba(0,229,160,0.04)';
+    const barWidth = Math.round((team.fcTotal / maxFC) * 100);
+    row.innerHTML = `
+      <div class="rankings-cell"><span class="rank-num ${rankClass}">${i + 1}</span></div>
+      <div class="rankings-cell rank-name">${team.isMe ? '★ ' : ''}${team.username}</div>
+      <div class="rankings-cell rank-fc">${team.fcTotal.toLocaleString()}</div>
+      <div class="rankings-cell rank-ra">${team.raTotal.toLocaleString()}</div>
+      <div class="rank-bar-cell">
+        <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${barWidth}%;background:${team.isMe ? 'var(--accent)' : 'var(--border)' };filter:brightness(${1 + (100-barWidth)/200})"></div></div>
+      </div>`;
+    row.style.cursor = 'pointer';
+    row.onclick = () => toggleRosterDetail(row, team);
+    table.appendChild(row);
+
+    // Expandable position breakdown
+    const detail = document.createElement('div');
+    detail.className = 'roster-detail';
+    detail.id = `detail-${i}`;
+    detail.style.display = 'none';
+    detail.style.padding = '10px 14px 14px';
+    detail.style.background = 'rgba(0,0,0,0.2)';
+    detail.style.borderBottom = '1px solid var(--border)';
+    const positions = ['QB','RB','WR','TE'];
+    detail.innerHTML = `<div style="display:flex;gap:16px;flex-wrap:wrap;">
+      ${positions.map(pos => `
+        <div style="text-align:center;">
+          <div class="asset-pos pos-${pos}" style="margin:0 auto 4px;">${pos}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);">${(team.byPos[pos]||0).toLocaleString()}</div>
+        </div>`).join('')}
+      <div style="margin-left:auto;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);align-self:center;">${team.playerCount} players</div>
+    </div>`;
+    table.appendChild(detail);
+  });
+
+  container.appendChild(table);
+
+  // Run AI Power Rankings
+  runRankingsAI(teams);
+}
+
+function toggleRosterDetail(row, team) {
+  const idx = Array.from(row.parentNode.children).indexOf(row);
+  const detail = row.nextElementSibling;
+  if (detail?.classList.contains('roster-detail')) {
+    detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+// ── Trade Finder ──────────────────────────────────────────────────────────
+function loadTradeFinder() {
+  const container = document.getElementById('finderList');
+  if (!allRosters.length || !myRoster.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:40px;">Load your league first.</div>';
+    return;
+  }
+
+  container.innerHTML = '<div class="empty-state" style="padding:20px;"><span class="spinner"></span> Scanning league for trade targets…</div>';
+
+  setTimeout(() => {
+    const myProfile  = getRosterProfile(allRosters.find(r => r.owner_id === userId)?.roster_id);
+    const suggestions = [];
+
+    // Profile my weaknesses
+    const myQB1Val = myProfile?.qb1Val || 0;
+    const myQB2Val = myProfile?.qb2Val || 0;
+    const myRBVal  = (myProfile?.rbs || []).slice(0,3).reduce((s,p)=>s+(p.value||0),0);
+    const myWRVal  = (myProfile?.wrs || []).slice(0,3).reduce((s,p)=>s+(p.value||0),0);
+    const myTEVal  = (myProfile?.tes || []).slice(0,1).reduce((s,p)=>s+(p.value||0),0);
+
+    allRosters
+      .filter(r => r.owner_id !== userId)
+      .forEach(theirRoster => {
+        const theirProfile = getRosterProfile(theirRoster.roster_id);
+        if (!theirProfile) return;
+        const username = rosterIdToUsername[theirRoster.roster_id] || `Team ${theirRoster.roster_id}`;
+
+        // Find players they have that I need
+        const targets = [];
+
+        // QB need
+        if (myQB1Val < 4000 || myQB2Val < 1500) {
+          theirProfile.qbs.forEach(p => {
+            if (p.value > myQB1Val + 500 || (p.value > 1500 && myQB2Val < 1000)) {
+              targets.push({ player: p, reason: 'QB upgrade', priority: p.value > 5000 ? 'high' : 'medium' });
+            }
+          });
+        }
+
+        // RB depth
+        const theirTopRBs = theirProfile.rbs.filter(p => p.value > 1000);
+        theirTopRBs.slice(3).forEach(p => {
+          if (p.value > 1200 && myRBVal / 3 < p.value * 0.8) {
+            targets.push({ player: p, reason: 'RB depth', priority: 'medium' });
+          }
+        });
+
+        // WR need
+        if (myWRVal / 3 < 2000) {
+          theirProfile.wrs.slice(0,4).forEach(p => {
+            if (p.value > 2500) {
+              targets.push({ player: p, reason: 'WR upgrade', priority: p.value > 4000 ? 'high' : 'medium' });
+            }
+          });
+        }
+
+        // Young assets they might sell
+        theirProfile.agingVets?.forEach(p => {
+          if (p.value > 2000) {
+            targets.push({ player: p, reason: 'Buy the dip — FC > RA', priority: 'low' });
+          }
+        });
+
+        if (!targets.length) return;
+
+        // What can I offer them?
+        const offers = buildOfferFor(theirProfile, targets);
+
+        suggestions.push({ username, rosterId: theirRoster.roster_id, targets: targets.slice(0,3), offers, theirPhase: theirProfile.phase });
+      });
+
+    if (!suggestions.length) {
+      container.innerHTML = '<div class="empty-state" style="padding:40px;">No clear trade targets found — your roster looks well balanced!</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    // Sort by priority
+    suggestions.sort((a,b) => {
+      const score = s => s.targets.filter(t=>t.priority==='high').length * 3 + s.targets.filter(t=>t.priority==='medium').length;
+      return score(b) - score(a);
+    });
+
+    suggestions.slice(0, 8).forEach(s => {
+      const card = document.createElement('div');
+      card.className = 'finder-card';
+
+      const phaseColor = s.theirPhase === 'contending' ? 'var(--accent2)' : s.theirPhase === 'competing' ? 'var(--accent3)' : 'var(--muted)';
+
+      card.innerHTML = `
+        <div class="finder-card-header">
+          <div>
+            <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;">@${s.username}</span>
+            <span style="font-family:'DM Mono',monospace;font-size:10px;color:${phaseColor};margin-left:10px;text-transform:uppercase;">${s.theirPhase}</span>
+          </div>
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">${s.targets.length} target${s.targets.length>1?'s':''}</span>
+        </div>
+        <div class="finder-card-body">
+          <div class="finder-trade-row">
+            <span class="finder-label">TARGET</span>
+            <div class="finder-chips">
+              ${s.targets.map(t => `
+                <span class="flow-player-chip">
+                  <span class="asset-pos pos-${t.player.position}" style="font-size:9px;">${t.player.position}</span>
+                  ${t.player.name}
+                  <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">FC ${(t.player.value||0).toLocaleString()}</span>
+                  <span class="finder-net ${t.priority==='high'?'pos':t.priority==='low'?'neg':'even'}">${t.reason}</span>
+                </span>`).join('')}
+            </div>
+          </div>
+          ${s.offers.length ? `
+          <div class="finder-trade-row">
+            <span class="finder-label">OFFER</span>
+            <div class="finder-chips">
+              ${s.offers.map(o => `
+                <span class="flow-player-chip">
+                  <span class="asset-pos pos-${o.position}" style="font-size:9px;">${o.position}</span>
+                  ${o.name}
+                  <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">FC ${(o.value||0).toLocaleString()}</span>
+                </span>`).join('')}
+            </div>
+          </div>` : ''}
+        </div>`;
+      container.appendChild(card);
+    });
+  }, 80);
+}
+
+function buildOfferFor(theirProfile, targets) {
+  // Find players from my roster that match what they need
+  const targetVal = targets.reduce((s,t) => s + (t.player.value||0), 0) / targets.length;
+  const theirPhase = theirProfile.phase;
+
+  // They want picks if rebuilding, players if contending
+  const offers = [];
+  if (theirPhase === 'rebuilding' || theirPhase === 'full rebuild') {
+    // Offer young depth from my roster
+    const youngDepth = myRoster.filter(p => p.raRank && p.raRank > 30 && p.value > 800 && p.value < targetVal * 1.4);
+    offers.push(...youngDepth.slice(0, 2));
+  } else {
+    // Offer proven players near target value
+    const matchVal = myRoster.filter(p => p.value >= targetVal * 0.6 && p.value <= targetVal * 1.5 && p.position !== 'QB');
+    offers.push(...matchVal.slice(0, 2));
+  }
+  return offers;
+}
+
+// ── Buy / Sell Indicators ─────────────────────────────────────────────────
+function loadBuySell() {
+  const container = document.getElementById('buysellList');
+  if (!allRosters.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:40px;">Load your league first.</div>';
+    return;
+  }
+
+  container.innerHTML = '<div class="empty-state" style="padding:20px;"><span class="spinner"></span> Analysing values…</div>';
+
+  setTimeout(() => {
+    const sellPlayers = [];
+    const buyPlayers  = [];
+    const holdPlayers = [];
+
+    allRosters.forEach(roster => {
+      const username = rosterIdToUsername[roster.roster_id] || `Team ${roster.roster_id}`;
+      const isMe = roster.owner_id === userId;
+      const players = rosterToPlayers(roster.players || []);
+
+      players.forEach(p => {
+        if (!p.value || !p.raValue || p.value < 500) return;
+        const gap = p.value - p.raValue;
+        const gapPct = gap / p.value;
+
+        if (gapPct > 0.25 && gap > 800) {
+          // FC >> RA = market overvalues, good time to sell
+          sellPlayers.push({ ...p, username, isMe, gap, gapPct, signal: 'SELL' });
+        } else if (gapPct < -0.2 && gap < -600) {
+          // RA >> FC = undervalued by market, good time to buy
+          buyPlayers.push({ ...p, username, isMe, gap, gapPct, signal: 'BUY' });
+        }
+      });
+    });
+
+    sellPlayers.sort((a,b) => Math.abs(b.gap) - Math.abs(a.gap));
+    buyPlayers.sort((a,b)  => Math.abs(b.gap) - Math.abs(a.gap));
+
+    if (!sellPlayers.length && !buyPlayers.length) {
+      container.innerHTML = '<div class="empty-state" style="padding:40px;">No significant FC vs RA gaps found — values are well aligned across the league.</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+
+    const renderSection = (players, label, badgeClass, color) => {
+      if (!players.length) return;
+      const section = document.createElement('div');
+      section.innerHTML = `<div class="buysell-section-label" style="color:${color};">${label}</div>`;
+
+      players.slice(0, 12).forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'buysell-row';
+        if (p.isMe) row.style.borderColor = color;
+        row.innerHTML = `
+          <span class="asset-pos pos-${p.position}">${p.position}</span>
+          <span class="buysell-name">${p.name}${p.isMe ? ' <span style="font-size:10px;color:var(--accent);">★ yours</span>' : ''}</span>
+          <span class="buysell-owner">@${p.username}</span>
+          <span class="buysell-vals">FC ${p.value.toLocaleString()} · RA ${p.raValue.toLocaleString()}</span>
+          <span class="buysell-gap" style="color:${color};">${p.gap > 0 ? '+' : ''}${p.gap.toLocaleString()}</span>
+          <span class="buysell-badge ${badgeClass}">${p.signal}</span>`;
+        section.appendChild(row);
+      });
+
+      container.appendChild(section);
+    };
+
+    renderSection(sellPlayers, '🔴 SELL HIGH — FC overvalues these players', 'var(--accent2)', 'var(--accent2)');
+    renderSection(buyPlayers,  '🟢 BUY LOW — RA sees more value than the market', 'var(--accent)', 'var(--accent)');
+
+    // Summary insight
+    const mySelIs = sellPlayers.filter(p=>p.isMe);
+    const myBuys  = buyPlayers.filter(p=>p.isMe);
+    if (mySelIs.length || myBuys.length) {
+      const insight = document.createElement('div');
+      insight.style.cssText = 'margin-top:16px;padding:14px;background:rgba(255,214,10,0.06);border:1px solid rgba(255,214,10,0.2);border-radius:6px;font-size:13px;font-family:DM Sans,sans-serif;line-height:1.6;';
+      let text = '⚡ Your roster insight: ';
+      if (mySelIs.length) text += `You own ${mySelIs.map(p=>p.name).join(', ')} — the market currently overvalues ${mySelIs.length > 1 ? 'these players' : 'this player'} vs dynasty metrics. Consider shopping them. `;
+      if (myBuys.length)  text += `${myBuys.map(p=>p.name).join(', ')} ${myBuys.length > 1 ? 'are' : 'is'} undervalued by the trade market — potentially good targets to acquire.`;
+      insight.textContent = text;
+      container.appendChild(insight);
+    }
+  }, 80);
+}
+
+// ── Waiver Wire ───────────────────────────────────────────────────────────
+async function loadWaiverWire() {
+  const container = document.getElementById('waiverList');
+  const leagueId  = document.getElementById('leagueSelect').value;
+
+  if (!leagueId || !Object.keys(playerData).length) {
+    container.innerHTML = '<div class="empty-state" style="padding:40px;">Load your league first.</div>';
+    return;
+  }
+
+  container.innerHTML = '<div class="empty-state" style="padding:20px;"><span class="spinner"></span> Scanning waiver wire…</div>';
+
+  // Get all rostered player IDs across the league
+  const rosteredIds = new Set();
+  allRosters.forEach(r => (r.players || []).forEach(pid => rosteredIds.add(pid)));
+
+  // Find unrostered players with RA value
+  const waiverPlayers = [];
+
+  Object.entries(raByName).forEach(([key, raData]) => {
+    if (raData.value < 300 || raData.position === 'PICK') return;
+
+    // Find the Sleeper ID for this player
+    const pid = nameToSleeperId[key];
+    if (!pid) return;
+    if (rosteredIds.has(pid)) return; // already rostered
+
+    const p = playerData[pid];
+    if (!p) return;
+    // Filter to relevant positions
+    if (!['QB','RB','WR','TE'].includes(p.position)) return;
+
+    const fc = fcByName[key];
+    waiverPlayers.push({
+      name: raData.displayName,
+      position: raData.position || p.position,
+      raValue: raData.value,
+      raRank: raData.rank,
+      fcValue: fc?.value || 0,
+      sleeperId: pid
+    });
+  });
+
+  waiverPlayers.sort((a,b) => b.raValue - a.raValue);
+
+  if (!waiverPlayers.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:40px;">No notable players on waivers — your league managers have done their homework.</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+
+  // Group by position
+  const positions = ['QB','RB','WR','TE'];
+  positions.forEach(pos => {
+    const group = waiverPlayers.filter(p => p.position === pos).slice(0, 8);
+    if (!group.length) return;
+
+    const section = document.createElement('div');
+    section.innerHTML = `<div class="buysell-section-label"><span class="asset-pos pos-${pos}" style="margin-right:8px;">${pos}</span>${pos} Free Agents</div>`;
+
+    group.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'waiver-row';
+      const gap     = p.fcValue - p.raValue;
+      const gapStr  = p.fcValue ? `<span style="font-family:'DM Mono',monospace;font-size:11px;color:${gap > 500 ? 'var(--accent2)' : gap < -500 ? 'var(--accent)' : 'var(--muted)'};">${gap>0?'+':''}${gap.toLocaleString()} gap</span>` : '';
+      const rankBadge = p.raRank ? `<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">RA #${p.raRank}</span>` : '';
+      row.innerHTML = `
+        <span class="asset-pos pos-${p.position}">${p.position}</span>
+        <span class="waiver-name">${p.name}</span>
+        ${rankBadge}
+        <span class="waiver-vals">RA ${p.raValue.toLocaleString()}${p.fcValue ? ' · FC ' + p.fcValue.toLocaleString() : ''}</span>
+        ${gapStr}
+        <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="addWaiverToTrade('${p.name.replace(/'/g,"\\'")}','${p.position}',${p.raValue},${p.fcValue})">+ Trade</button>`;
+      section.appendChild(row);
+    });
+
+    container.appendChild(section);
+  });
+
+  const total = waiverPlayers.length;
+  const note = document.createElement('div');
+  note.style.cssText = 'font-family:DM Mono,monospace;font-size:11px;color:var(--muted);text-align:center;margin-top:12px;';
+  note.textContent = `${total} players with dynasty value found on waivers`;
+  container.appendChild(note);
+}
+
+function addWaiverToTrade(name, position, raValue, fcValue) {
+  // Add to trade builder and switch to trade tab
+  addAsset('you', { name, position, value: fcValue || raValue, raValue, raRank: null });
+  showTab('trade');
+  setStatus(`Added ${name} to your trade column — build a trade around them.`, 'info');
+}
+let currentFeedback = { rating: null, note: '', tradeSnapshot: null };
+
+function runLiveTradeAI() {
+  const section = document.getElementById('liveAISection');
+  const textEl  = document.getElementById('liveAIText');
+  const fbRow   = document.getElementById('aiFeedbackRow');
+  const fbSaved = document.getElementById('feedbackSaved');
+  const fbNote  = document.getElementById('feedbackNote');
+
+  currentFeedback = { rating: null, note: '', tradeSnapshot: buildTradeSnapshot() };
+  document.querySelectorAll('.feedback-btn').forEach(b => b.classList.remove('selected','selected-bad'));
+  fbRow.style.display   = 'none';
+  fbSaved.style.display = 'none';
+  fbNote.style.display  = 'none';
+  document.getElementById('feedbackText').value = '';
+
+  section.style.display = 'block';
+  textEl.innerHTML = '<span class="spinner"></span> Analysing your trade…';
+
+  setTimeout(() => {
+    try {
+      const fakeTrade = buildLiveTradeFake();
+      const analysis  = generateTradeAnalysis(fakeTrade);
+      textEl.textContent = analysis;
+      fbRow.style.display = 'block';
+    } catch(e) {
+      textEl.textContent = 'Analysis unavailable — add players to both sides first.';
+    }
+  }, 80);
+}
+
+function buildTradeSnapshot() {
+  return {
+    mode: tradeMode,
+    you:  { user: document.getElementById('userA')?.value.trim() || 'You',  gives: tradeYou.map(a=>a.name) },
+    them: { user: document.getElementById('userB')?.value.trim() || 'Team B', gives: tradeThem.map(a=>a.name) },
+    c:    tradeMode === 3 ? { user: document.getElementById('userC')?.value.trim() || 'Team C', gives: tradeC.map(a=>a.name) } : null,
+    timestamp: new Date().toISOString()
+  };
+}
+
+function buildLiveTradeFake() {
+  const nameA = document.getElementById('userA')?.value.trim() || 'You';
+  const nameB = document.getElementById('userB')?.value.trim() || 'Team B';
+  const nameC = document.getElementById('userC')?.value.trim() || 'Team C';
+
+  // Find roster IDs for each username
+  function findRosterId(username, fallback) {
+    const entry = Object.entries(rosterIdToUsername).find(([,u]) => u.toLowerCase() === username.toLowerCase());
+    return entry ? parseInt(entry[0]) : fallback;
+  }
+
+  const ridA = findRosterId(nameA, 'rA');
+  const ridB = findRosterId(nameB, 'rB');
+  const ridC = findRosterId(nameC, 'rC');
+
+  const sides = [
+    { rosterId: ridA, username: nameA, ownerId: allRosters.find(r=>r.roster_id===ridA)?.owner_id },
+    { rosterId: ridB, username: nameB, ownerId: allRosters.find(r=>r.roster_id===ridB)?.owner_id },
+  ];
+  if (tradeMode === 3) sides.push(
+    { rosterId: ridC, username: nameC, ownerId: allRosters.find(r=>r.roster_id===ridC)?.owner_id }
+  );
+
+  const sideAssets = {};
+  sides.forEach(s => { sideAssets[s.rosterId] = { gives: [], gets: [] }; });
+
+  const toAsset = a => ({ name: a.name, pos: a.position, val: a.value || 0 });
+
+  tradeYou.forEach(a  => sideAssets[ridA] && sideAssets[ridA].gives.push(toAsset(a)));
+  tradeThem.forEach(a => sideAssets[ridB] && sideAssets[ridB].gives.push(toAsset(a)));
+  if (tradeMode === 3) tradeC.forEach(a => sideAssets[ridC] && sideAssets[ridC].gives.push(toAsset(a)));
+
+  // Wire gets
+  if (tradeMode === 2) {
+    sideAssets[ridB].gets = [...sideAssets[ridA].gives];
+    sideAssets[ridA].gets = [...sideAssets[ridB].gives];
+  } else {
+    const allA = [...tradeYou.map(a=>({...a,from:ridA})), ...tradeThem.map(a=>({...a,from:ridB})), ...tradeC.map(a=>({...a,from:ridC}))];
+    allA.forEach(a => {
+      const destRid = a.to === 'you' ? ridA : a.to === 'c' ? ridC : ridB;
+      if (sideAssets[destRid]) sideAssets[destRid].gets.push(toAsset(a));
+    });
+  }
+
+  const date = new Date().toLocaleDateString('en-IE', { day:'numeric', month:'short', year:'numeric' });
+  return { sides, sideAssets, date };
+}
+
+// ── Supabase ──────────────────────────────────────────────────────────────
+const SB_URL = 'https://nwpbhswzbvtweewxrfim.supabase.co/rest/v1';
+const SB_KEY = 'sb_publishable_GjK71f-h1raPD_Cw3RM1VQ_SMlg-w20';
+const SB_HEADERS = {
+  'Content-Type': 'application/json',
+  'apikey': SB_KEY,
+  'Authorization': `Bearer ${SB_KEY}`
+};
+
+let userProfile = {
+  username: '',
+  feedbackHistory: [],   // loaded from Supabase on login
+  tendencies: {}         // derived preferences
+};
+
+async function loadUserProfile(username) {
+  if (!username) return;
+  userProfile.username = username;
+  try {
+    const res = await fetch(
+      `${SB_URL}/trade_feedback?username=eq.${encodeURIComponent(username)}&order=created_at.desc&limit=50`,
+      { headers: SB_HEADERS }
+    );
+    if (!res.ok) throw new Error('fetch failed');
+    const rows = await res.json();
+    userProfile.feedbackHistory = rows;
+    userProfile.tendencies = deriveTendencies(rows);
+    console.log(`Loaded ${rows.length} feedback entries for @${username}`);
+  } catch(e) {
+    console.warn('Supabase profile load failed:', e.message);
+    // Fall back to localStorage
+    try {
+      userProfile.feedbackHistory = JSON.parse(localStorage.getItem(`tradelab_${username}`) || '[]');
+      userProfile.tendencies = deriveTendencies(userProfile.feedbackHistory);
+    } catch(e2) {}
+  }
+}
+
+function deriveTendencies(history) {
+  if (!history.length) return {};
+  const t = {
+    acceptedWithQBGain: 0, acceptedWithQBLoss: 0,
+    acceptedPositiveValue: 0, acceptedNegativeValue: 0,
+    declinedPositiveValue: 0, declinedNegativeValue: 0,
+    badAnalysisCount: 0, goodAnalysisCount: 0,
+    acceptedPicksGiven: 0, declinedPicksGiven: 0,
+    totalAccepted: 0, totalDeclined: 0,
+    notes: []
+  };
+
+  history.forEach(r => {
+    const snap = r.trade_snapshot;
+    if (!snap) return;
+    const myGives = snap.you?.gives || [];
+    const myGets  = snap.them?.gives || [];
+
+    const gaveQB  = myGives.some(n => { const ra = raByName[n.toLowerCase().replace(/[^a-z ]/g,'')]; return ra?.position === 'QB'; });
+    const gotQB   = myGets.some(n  => { const ra = raByName[n.toLowerCase().replace(/[^a-z ]/g,'')]; return ra?.position === 'QB'; });
+    const gavePick = myGives.some(n => n.includes('Round') || n.includes('Pick'));
+
+    if (r.rating === 'accepted') {
+      t.totalAccepted++;
+      if (gotQB && !gaveQB)  t.acceptedWithQBGain++;
+      if (gaveQB && !gotQB)  t.acceptedWithQBLoss++;
+      if (gavePick)          t.acceptedPicksGiven++;
+    }
+    if (r.rating === 'declined') {
+      t.totalDeclined++;
+      if (gavePick) t.declinedPicksGiven++;
+    }
+    if (r.rating === 'good')    t.goodAnalysisCount++;
+    if (r.rating === 'bad')     t.badAnalysisCount++;
+    if (r.note) t.notes.push(r.note);
+  });
+
+  return t;
+}
+
+function buildPersonalisedContext() {
+  const t = userProfile.tendencies;
+  const h = userProfile.feedbackHistory;
+  if (!h.length) return '';
+
+  const lines = [];
+  lines.push(`This manager has rated ${h.length} previous trade${h.length > 1 ? 's' : ''}.`);
+
+  if (t.totalAccepted > 0 && t.acceptedWithQBGain > 0) {
+    lines.push(`They have accepted trades involving a QB upgrade ${t.acceptedWithQBGain} time${t.acceptedWithQBGain > 1 ? 's' : ''} — they clearly value improving their QB room.`);
+  }
+  if (t.totalAccepted > 0 && t.acceptedWithQBLoss > 0) {
+    lines.push(`They have accepted trades where they gave away a QB ${t.acceptedWithQBLoss} time${t.acceptedWithQBLoss > 1 ? 's' : ''} — they're willing to move QBs when the return is right.`);
+  }
+  if (t.acceptedPicksGiven > t.declinedPicksGiven + 1) {
+    lines.push(`They are comfortable trading away draft picks — they have done so in ${t.acceptedPicksGiven} accepted trades.`);
+  }
+  if (t.declinedPicksGiven > t.acceptedPicksGiven + 1) {
+    lines.push(`They tend to protect their draft picks — they have declined ${t.declinedPicksGiven} trades where picks were involved.`);
+  }
+  if (t.badAnalysisCount > t.goodAnalysisCount && h.length > 3) {
+    lines.push(`Note: this manager has flagged several previous analyses as off the mark — they may value players differently to the standard FC/RA metrics.`);
+  }
+  if (t.notes.length) {
+    const recentNotes = t.notes.slice(-3);
+    lines.push(`Recent notes from this manager: "${recentNotes.join('" / "')}".`);
+  }
+
+  return lines.length > 1 ? '\n\nPersonal context for this manager:\n' + lines.join(' ') : '';
+}
+
+async function saveToSupabase(entry) {
+  try {
+    await fetch(`${SB_URL}/trade_feedback`, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
+      body: JSON.stringify(entry)
+    });
+  } catch(e) {
+    console.warn('Supabase save failed, using localStorage:', e.message);
+    try {
+      const key = `tradelab_${entry.username}`;
+      const local = JSON.parse(localStorage.getItem(key) || '[]');
+      local.push(entry);
+      localStorage.setItem(key, JSON.stringify(local.slice(-50)));
+    } catch(e2) {}
+  }
+}
+
+// ── Feedback ──────────────────────────────────────────────────────────────
+function submitFeedback(type) {
+  currentFeedback.rating = type;
+  document.querySelectorAll('.feedback-btn').forEach(b => b.classList.remove('selected','selected-bad'));
+  const idMap = { good:'fbGood', bad:'fbBad', accepted:'fbAccepted', declined:'fbDeclined' };
+  const btn = document.getElementById(idMap[type]);
+  if (btn) btn.classList.add(type === 'bad' || type === 'declined' ? 'selected-bad' : 'selected');
+  document.getElementById('feedbackNote').style.display = 'block';
+}
+
+async function saveFeedbackNote() {
+  const note = document.getElementById('feedbackText').value.trim();
+  currentFeedback.note = note;
+
+  const username = document.getElementById('userA')?.value.trim() || document.getElementById('sleeperUser')?.value.trim() || 'unknown';
+  const analysisText = document.getElementById('liveAIText')?.textContent || '';
+
+  const entry = {
+    username,
+    rating: currentFeedback.rating,
+    note,
+    trade_snapshot: currentFeedback.tradeSnapshot,
+    analysis: analysisText.slice(0, 2000),
+    created_at: new Date().toISOString()
+  };
+
+  // Save to Supabase
+  await saveToSupabase(entry);
+
+  // Update local profile immediately so next analysis benefits right away
+  userProfile.feedbackHistory.unshift(entry);
+  userProfile.tendencies = deriveTendencies(userProfile.feedbackHistory);
+
+  document.getElementById('feedbackNote').style.display = 'none';
+  const labels = {
+    good: '👍 Saved — analysis rated helpful',
+    bad: '👎 Saved — noted for next time',
+    accepted: '✅ Trade accepted — logged',
+    declined: '❌ Trade declined — logged'
+  };
+  const saved = document.getElementById('feedbackSaved');
+  saved.textContent = (labels[currentFeedback.rating] || 'Saved') + (note ? ` — "${note}"` : '');
+  saved.style.display = 'block';
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('statusMsg');
+  el.innerHTML = msg;
+  el.className = 'status ' + type;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+Promise.all([buildRA(), loadFC()]).then(([_, fcOk]) => {
+  console.log(`FC: ${fcOk ? Object.keys(fcByName).length + ' players' : 'failed'} | RA: ${Object.keys(raByName).length} players loaded`);
+});
+</script>
+</body>
+</html>
