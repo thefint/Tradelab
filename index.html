@@ -1754,11 +1754,13 @@
     <button class="sort-btn" id="sort-avgRank"           onclick="sortPlayers('avgRank')">AVG RANK</button>
     <button class="sort-btn" id="sort-positionRank"      onclick="sortPlayers('positionRank')">POS RANK</button>
     <button class="sort-btn" id="sort-trend30"           onclick="sortPlayers('trend30')">30D TREND</button>
-    <button class="sort-btn" id="sort-yprr"              onclick="sortPlayers('yprr')">YPRR</button>
-    <button class="sort-btn" id="sort-targetShare"       onclick="sortPlayers('targetShare')">TGT SHARE</button>
-    <button class="sort-btn" id="sort-adot"              onclick="sortPlayers('adot')">ADOT</button>
-    <button class="sort-btn" id="sort-yac"               onclick="sortPlayers('yac')">YAC</button>
+    <button class="sort-btn" id="sort-projPts"           onclick="sortPlayers('projPts')">PROJ PTS</button>
     <button class="sort-btn" id="sort-projTargets"       onclick="sortPlayers('projTargets')">PROJ TGT</button>
+    <button class="sort-btn" id="sort-recYds"            onclick="sortPlayers('recYds')">REC YDS</button>
+    <span style="width:6px;display:inline-block;"></span>
+    <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);align-self:center;letter-spacing:1px;">'25 STATS</span>
+    <button class="sort-btn" id="sort-yprr"              onclick="sortPlayers('yprr')">YPRR</button>
+    <button class="sort-btn" id="sort-yac"               onclick="sortPlayers('yac')">YAC</button>
     <span style="width:8px;display:inline-block;"></span>
     <button class="sort-btn" id="sort-age"               onclick="sortPlayers('age')">AGE ↑</button>
   </div>
@@ -1936,19 +1938,23 @@ async function loadStats() {
       if (!name) return;
       const key = name.toLowerCase().replace(/[^a-z ]/g,'');
       statsByName[key] = {
-        yprr:        parseFloat(cols[idx('YPRR')])        || null,
-        targetShare: parseFloat(cols[idx('TargetShare')]) || null,
-        airYardShare:parseFloat(cols[idx('AirYardShare')])|| null,
-        snapPct:     parseFloat(cols[idx('SnapPct')])     || null,
-        routes:      parseInt(cols[idx('Routes')])        || null,
+        // Mike Clay 2026 projections
+        projTargets: parseInt(cols[idx('Targets')])       || null,
+        yprr:        parseFloat(cols[idx('YPRR_2025')])     || null,
+        yac:         parseInt(cols[idx('YAC_2025')])          || null,
         rec:         parseInt(cols[idx('Receptions')])    || null,
-        tgt:         parseInt(cols[idx('Targets')])       || null,
-        yds:         parseInt(cols[idx('Yards')])         || null,
-        tds:         parseInt(cols[idx('TDs')])           || null,
-        adot:        parseFloat(cols[idx('ADOT')])        || null,
-        yac:         parseInt(cols[idx('YAC')])           || null,
-        projTargets: parseInt(cols[idx('ProjTargets')])   || null,
+        recYds:      parseInt(cols[idx('RecYds')])        || null,
+        recTD:       parseInt(cols[idx('RecTD')])         || null,
+        rushAtt:     parseInt(cols[idx('RushAtt')])       || null,
+        rushYds:     parseInt(cols[idx('RushYds')])       || null,
+        rushTD:      parseInt(cols[idx('RushTD')])        || null,
+        passYds:     parseInt(cols[idx('PassYds')])       || null,
+        passTD:      parseInt(cols[idx('PassTD')])        || null,
+        projPts:     parseFloat(cols[idx('ProjPts')])     || null,
         team:        cols[idx('Team')] || null,
+        // Legacy fields (null if not in Clay projections)
+        yprr: null, targetShare: null, airYardShare: null, snapPct: null,
+        yac: null, adot: null,
       };
     });
     console.log('Stats loaded:', Object.keys(statsByName).length, 'players');
@@ -3891,17 +3897,18 @@ async function loadPlayerRankings() {
       overallRank:  fc.overallRank || null,
       positionRank: fc.positionRank || null,
       trend30:      fc.trend30 || 0,
-      yprr:         stats?.yprr || null,
-      targetShare:  stats?.targetShare || null,
-      airYardShare: stats?.airYardShare || null,
-      snapPct:      stats?.snapPct || null,
-      rec:          stats?.rec || null,
-      tgt:          stats?.tgt || null,
-      yds:          stats?.yds || null,
-      tds:          stats?.tds || null,
-      adot:         stats?.adot || null,
-      yac:          stats?.yac || null,
       projTargets:  stats?.projTargets || null,
+      yprr:         stats?.yprr || null,
+      yac:          stats?.yac || null,
+      projPts:      stats?.projPts || null,
+      recYds:       stats?.recYds || null,
+      recTD:        stats?.recTD || null,
+      rushYds:      stats?.rushYds || null,
+      rushTD:       stats?.rushTD || null,
+      passYds:      stats?.passYds || null,
+      passTD:       stats?.passTD || null,
+      // Legacy stats (null from Clay projections)
+      yprr: null, targetShare: null, adot: null, yac: null,
       fpRank:       getFPData(fc.displayName, fc.team, fc.position)?.fpRank || null,
       fpAvg:        getFPData(fc.displayName, fc.team, fc.position)?.fpAvg || null,
       owner:        owner ? owner.username : null,
@@ -4012,8 +4019,8 @@ function renderPlayerRankings() {
     return (av - bv) * dir;
   });
 
-  const statsCol   = ['yprr','targetShare','adot','snapPct','yac','fpRank','avgRank','projTargets'].includes(col) ? col : null;
-  const statsLabel = { yprr:'YPRR', targetShare:'TGT%', adot:'ADOT', snapPct:'SNAP%', yac:'YAC', fpRank:'FP#', avgRank:'AVG#', projTargets:'PTGT' };
+  const statsCol   = ['projPts','projTargets','recYds','fpRank','avgRank','yprr','yac'].includes(col) ? col : null;
+  const statsLabel = { projPts:'PROJ PTS', projTargets:'PROJ TGT', recYds:'REC YDS', fpRank:'FP#', avgRank:'AVG#', yprr:"YPRR '25", yac:"YAC '25" };
 
   const table = document.createElement('div');
   table.className = 'player-rank-table';
@@ -4078,16 +4085,15 @@ function renderPlayerRankings() {
     let middleCell;
     if (statsCol && p[statsCol] != null) {
       const val = p[statsCol];
-      const formatted = statsCol === 'yprr' ? val.toFixed(2)
-        : (statsCol === 'targetShare' || statsCol === 'airYardShare' || statsCol === 'snapPct') ? val.toFixed(1)+'%'
-        : statsCol === 'yac' ? val.toLocaleString()
-        : (statsCol === 'fpRank' || statsCol === 'avgRank') ? '#' + val
-        : statsCol === 'projTargets' ? val.toLocaleString()
-        : val.toFixed(1);
-      const statColor = statsCol === 'yprr' ? (val > 2.0 ? 'var(--win)' : val > 1.5 ? 'var(--accent3)' : 'var(--muted)')
+      const formatted = (statsCol === 'fpRank' || statsCol === 'avgRank') ? '#' + val
+        : statsCol === 'yprr' ? val.toFixed(2)
+        : val.toLocaleString();
+      const statColor = (statsCol === 'fpRank' || statsCol === 'avgRank') ? (val <= 25 ? 'var(--win)' : val <= 75 ? 'var(--accent3)' : 'var(--muted)')
+        : statsCol === 'projPts' ? (val > 300 ? 'var(--win)' : val > 200 ? 'var(--accent3)' : 'var(--muted)')
+        : statsCol === 'projTargets' ? (val > 130 ? 'var(--win)' : val > 90 ? 'var(--accent3)' : 'var(--muted)')
+        : statsCol === 'recYds' ? (val > 1200 ? 'var(--win)' : val > 800 ? 'var(--accent3)' : 'var(--muted)')
+        : statsCol === 'yprr' ? (val > 2.5 ? 'var(--win)' : val > 1.8 ? 'var(--accent3)' : 'var(--muted)')
         : statsCol === 'yac' ? (val > 500 ? 'var(--win)' : val > 300 ? 'var(--accent3)' : 'var(--muted)')
-        : (statsCol === 'fpRank' || statsCol === 'avgRank') ? (val <= 25 ? 'var(--win)' : val <= 75 ? 'var(--accent3)' : 'var(--muted)')
-        : statsCol === 'projTargets' ? (val > 130 ? 'var(--win)' : val > 100 ? 'var(--accent3)' : 'var(--muted)')
         : 'var(--text)';
       middleCell = `<span style="font-family:'DM Mono',monospace;font-size:11px;color:${statColor};">${formatted}</span>`;
     } else {
