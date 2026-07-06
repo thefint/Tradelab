@@ -1930,42 +1930,58 @@ async function loadStats() {
     const res = await fetch(STATS_GITHUB_URL);
     if (!res.ok) throw new Error('Stats fetch failed');
     const text = await res.text();
-    const lines = text.trim().split('\n');
-    const headers = lines[0].split(',').map(h => h.trim().replace(/[\r"]/g,''));
-    const idx = (col) => headers.indexOf(col);
+
+    // Proper CSV parser that handles quoted fields containing commas
+    function parseCSVLine(line) {
+      const row = [];
+      let cur = '', inQuote = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { inQuote = !inQuote; }
+        else if (ch === ',' && !inQuote) { row.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+      row.push(cur.trim());
+      return row;
+    }
+
+    const rawLines = text.trim().split('\n');
+    const headers = parseCSVLine(rawLines[0]);
+    const idx = col => headers.indexOf(col);
+    const n = s => { const v = parseFloat((s||'').replace(/,/g,'')); return isNaN(v) || v === 0 ? null : v; };
 
     statsByName = {};
-    lines.slice(1).forEach(line => {
-      const cols = line.split(',').map(c => c.trim().replace(/[\r"]/g,''));
-      const name = cols[idx('Player')] || '';
+    rawLines.slice(1).forEach(line => {
+      if (!line.trim()) return;
+      const cols = parseCSVLine(line);
+      const name = cols[idx('Player')]?.trim() || '';
       if (!name) return;
       const key = name.toLowerCase().replace(/[^a-z ]/g,'');
+
       statsByName[key] = {
-        // 2026 Mike Clay projections
-        projTargets:  parseFloat(cols[idx('Proj_Targets')])    || null,
-        rec:          parseFloat(cols[idx('Proj_Receptions')]) || null,
-        recYds:       parseFloat(cols[idx('Proj_RecYds')])     || null,
-        recTD:        parseFloat(cols[idx('Proj_RecTD')])      || null,
-        rushAtt:      parseFloat(cols[idx('Proj_RushAtt')])    || null,
-        rushYds:      parseFloat(cols[idx('Proj_RushYds')])    || null,
-        rushTD:       parseFloat(cols[idx('Proj_RushTD')])     || null,
-        passYds:      parseFloat(cols[idx('Proj_PassYds')])    || null,
-        passTD:       parseFloat(cols[idx('Proj_PassTD')])     || null,
-        projPts:      parseFloat(cols[idx('Proj_Pts')])        || null,
-        // 2025 FP actuals
-        tgt2025:      parseFloat(cols[idx('Tgt_2025')])        || null,
-        tgtPct2025:   parseFloat(cols[idx('TgtPct_2025')])     || null,
-        recYds2025:   parseFloat(cols[idx('RecYds_2025')])     || null,
-        fpts2025:     parseFloat(cols[idx('FPTS_2025')])       || null,
-        fptsG2025:    parseFloat(cols[idx('FPTSperG_2025')])   || null,
-        rushYds2025:  parseFloat(cols[idx('RushYds_2025')])    || null,
-        passYds2025:  parseFloat(cols[idx('PassYds_2025')])    || null,
-        // 2025 YPRR/YAC
-        yprr:         parseFloat(cols[idx('YPRR_2025')])       || null,
-        yac:          parseFloat(cols[idx('YAC_2025')])        || null,
-        team:         cols[idx('Team')] || null,
+        projTargets:  n(cols[idx('Proj_Targets')]),
+        rec:          n(cols[idx('Proj_Receptions')]),
+        recYds:       n(cols[idx('Proj_RecYds')]),
+        recTD:        n(cols[idx('Proj_RecTD')]),
+        rushAtt:      n(cols[idx('Proj_RushAtt')]),
+        rushYds:      n(cols[idx('Proj_RushYds')]),
+        rushTD:       n(cols[idx('Proj_RushTD')]),
+        passYds:      n(cols[idx('Proj_PassYds')]),
+        passTD:       n(cols[idx('Proj_PassTD')]),
+        projPts:      n(cols[idx('Proj_Pts')]),
+        tgt2025:      n(cols[idx('Tgt_2025')]),
+        tgtPct2025:   n(cols[idx('TgtPct_2025')]),
+        recYds2025:   n(cols[idx('RecYds_2025')]),
+        fpts2025:     n(cols[idx('FPTS_2025')]),
+        fptsG2025:    n(cols[idx('FPTSperG_2025')]),
+        rushYds2025:  n(cols[idx('RushYds_2025')]),
+        passYds2025:  n(cols[idx('PassYds_2025')]),
+        yprr:         n(cols[idx('YPRR_2025')]),
+        yac:          n(cols[idx('YAC_2025')]),
+        team:         cols[idx('Team')]?.trim() || null,
       };
     });
+
     console.log('Stats loaded:', Object.keys(statsByName).length, 'players');
     return true;
   } catch(e) {
