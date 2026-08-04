@@ -1990,13 +1990,14 @@
   <!-- FP TIERS SECTION -->
   <div id="redraft-tiers-section" style="display:none;">
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px;">
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;">FANTASYPROS API KEY</div>
-      <div style="display:flex;gap:6px;margin-bottom:6px;">
-        <input type="password" id="fpApiKeyInput" placeholder="Enter your FP API key…" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
-        <button class="btn btn-ghost" onclick="saveFPKey()" style="font-size:11px;padding:6px 12px;">Save</button>
-        <button class="btn btn-primary" onclick="refreshFPTiers()" style="font-size:11px;padding:6px 12px;">↻ Fetch (1 token)</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:2px;">FANTASYPROS LIVE TIERS</div>
+          <div style="font-size:11px;color:var(--muted);">Data synced from your Google Sheet · updated daily at 6am</div>
+        </div>
+        <button class="btn btn-primary" onclick="refreshFPTiers()" style="font-size:11px;padding:6px 14px;">↻ Sync from Sheet</button>
       </div>
-      <div id="fpApiStatus" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);min-height:14px;"></div>
+      <div id="fpApiStatus" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);min-height:14px;margin-top:6px;"></div>
     </div>
 
     <div class="pos-filter-row" id="fp-tier-pos-filters" style="margin-bottom:12px;">
@@ -7874,24 +7875,12 @@ function showRedraftSection(s) {
   else renderRedraftMyPicks();
 }
 
-// ── FantasyPros Live API — Tiers ─────────────────────────────────────────────
-const FP_CACHE_KEY = 'fp_ecr_cache_v1';
-const FP_CACHE_TTL = 24 * 60 * 60 * 1000;
+// ── FP Tiers — synced from Google Sheet (no API key in browser) ───────────────
+const FP_CACHE_KEY = 'fp_sheet_cache_v2';
+const FP_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+const FP_SHEET_ID  = '1_DMatHAuvFEvDou97RPocjTh5M01Ca_YMZ21_IClnyk';
 let fpLiveData = null;
 let fpTierPosFilter = 'ALL';
-
-function getFPApiKey() { return localStorage.getItem('fp_api_key') || ''; }
-
-function saveFPKey() {
-  const input = document.getElementById('fpApiKeyInput');
-  if (!input) return;
-  const val = input.value.trim();
-  if (!val) return;
-  localStorage.setItem('fp_api_key', val);
-  input.value = '';
-  input.placeholder = 'Key saved ✓';
-  setFPStatus('API key saved. Click Fetch to load rankings.');
-}
 
 function setFPStatus(msg, isError) {
   const el = document.getElementById('fpApiStatus');
@@ -7909,46 +7898,79 @@ function getFPCached() {
 }
 
 function initFPTiersSection() {
-  const key = getFPApiKey();
-  const input = document.getElementById('fpApiKeyInput');
-  if (key && input) input.placeholder = 'Key saved ✓';
-
   const cached = getFPCached();
   if (cached) {
     fpLiveData = cached;
-    const ago = Math.round((Date.now() - JSON.parse(localStorage.getItem(FP_CACHE_KEY)).timestamp) / 60000);
-    const agoStr = ago < 2 ? 'just now' : ago < 60 ? ago + 'm ago' : Math.round(ago / 60) + 'h ago';
-    setFPStatus('Cached data from ' + agoStr + ' · click Fetch to refresh (uses 1 token)');
-    renderFPTiers();
-  } else if (key) {
-    setFPStatus('No cached data — click Fetch to load (uses 1 token)');
+    try {
+      const ago = Math.round((Date.now() - JSON.parse(localStorage.getItem(FP_CACHE_KEY)).timestamp) / 60000);
+      const agoStr = ago < 2 ? 'just now' : ago < 60 ? ago + 'm ago' : Math.round(ago / 60) + 'h ago';
+      setFPStatus('Last synced ' + agoStr + ' · ' + (cached.players || []).length + ' players');
+    } catch(e) {}
     renderFPTiers();
   } else {
-    setFPStatus('Enter your FantasyPros API key and click Fetch.');
+    setFPStatus('Click "Sync from Sheet" to load live tier data.');
     renderFPTiers();
   }
 }
 
 async function refreshFPTiers() {
-  const key = getFPApiKey();
-  if (!key) { setFPStatus('Save your API key first.', true); return; }
-  setFPStatus('Fetching from FantasyPros…');
+  setFPStatus('Syncing from Google Sheet…');
+  const url = 'https://docs.google.com/spreadsheets/d/' + FP_SHEET_ID +
+              '/gviz/tq?tqx=out:csv&sheet=FP%20TIERS';
   try {
-    const year = new Date().getFullYear();
-    const resp = await fetch(
-      'https://api.fantasypros.com/public/v2/json/nfl/' + year + '/consensus-rankings?position=OP&scoring=PPR&limit=300&count=300',
-      { headers: { 'x-api-key': key } }
-    );
-    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' — check your key or token limit');
-    const data = await resp.json();
-    fpLiveData = data;
-    localStorage.setItem(FP_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: data }));
-    const count = (data.players || []).length;
-    setFPStatus('Updated just now · ' + count + ' players · 1 token used');
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const text = await resp.text();
+    const players = parseSheetCSV(text);
+    if (!players.length) throw new Error('No data found in FP TIERS tab — run the Apps Script first.');
+    fpLiveData = { players: players };
+    localStorage.setItem(FP_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: { players: players } }));
+    setFPStatus('Synced just now · ' + players.length + ' players loaded');
     renderFPTiers();
   } catch(e) {
-    setFPStatus('Error: ' + e.message, true);
+    setFPStatus('Sync failed: ' + e.message + ' · Make sure your Google Sheet is shared as "Anyone with the link can view"', true);
   }
+}
+
+function parseSheetCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const players = [];
+  for (var i = 1; i < lines.length; i++) {
+    var cols = parseCSVLine(lines[i]);
+    if (!cols[3] || cols[3].toUpperCase() === 'PLAYER') continue;
+    var tier   = parseInt(cols[0]) || 99;
+    var ecr    = parseInt(cols[1]) || null;
+    var pos    = (cols[2] || '').replace(/"/g, '').trim();
+    var name   = (cols[3] || '').replace(/"/g, '').trim();
+    var team   = (cols[4] || '').replace(/"/g, '').trim();
+    var range  = (cols[5] || '').replace(/"/g, '').trim();
+    var avg    = parseFloat(cols[6]) || null;
+    var parts  = range.split(/[–—\-]/);
+    players.push({
+      tier: tier,
+      rank_ecr: ecr,
+      player_position_id: pos,
+      player_name: name,
+      player_team_id: team,
+      rank_min: parts[0] ? parseInt(parts[0]) : null,
+      rank_max: parts[1] ? parseInt(parts[1]) : null,
+      rank_avg: avg,
+    });
+  }
+  return players;
+}
+
+function parseCSVLine(line) {
+  var result = [], cur = '', inQ = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (ch === '"') { inQ = !inQ; continue; }
+    if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; continue; }
+    cur += ch;
+  }
+  result.push(cur.trim());
+  return result;
 }
 
 function filterFPTiers(pos) {
