@@ -7963,23 +7963,43 @@ function filterFPTiers(pos) {
   renderFPTiers();
 }
 
+// ADP → tier band (12-team league, rounds as tiers)
+function fpAdpTier(adp) {
+  var a = parseFloat(adp) || 999;
+  if (a <= 12)  return 1;
+  if (a <= 24)  return 2;
+  if (a <= 36)  return 3;
+  if (a <= 48)  return 4;
+  if (a <= 60)  return 5;
+  if (a <= 84)  return 6;
+  if (a <= 108) return 7;
+  if (a <= 144) return 8;
+  if (a <= 192) return 9;
+  return 10;
+}
+
 function renderFPTiers() {
-  const container = document.getElementById('fpTiersList');
+  var container = document.getElementById('fpTiersList');
   if (!container) return;
 
-  const data = fpLiveData || getFPCached();
+  var data = fpLiveData || getFPCached();
   if (!data) {
-    container.innerHTML = '<div class="empty-state" style="padding:30px;">No data yet — enter your API key and click Fetch.</div>';
+    container.innerHTML = '<div class="empty-state" style="padding:30px;">Paste your Web App URL above and click Sync.</div>';
     return;
   }
 
-  const players = data.players || [];
-  const posFilter = fpTierPosFilter || 'ALL';
-  const searchQ = (document.getElementById('fpTierSearch') ? document.getElementById('fpTierSearch').value : '').toLowerCase();
+  var players = (data.players || []).slice();
+  var posFilter = fpTierPosFilter || 'ALL';
+  var searchQ = (document.getElementById('fpTierSearch') ? document.getElementById('fpTierSearch').value : '').toLowerCase();
 
-  const filtered = players.filter(function(p) {
-    if (posFilter !== 'ALL' && p.player_position_id !== posFilter) return false;
-    if (searchQ.length > 1 && !(p.player_name || '').toLowerCase().includes(searchQ)) return false;
+  // Detect which format the data is in (new: has .name/.adp, old: has .player_name/.rank_ecr)
+  var isNewFormat = players.length > 0 && players[0].name !== undefined;
+
+  var filtered = players.filter(function(p) {
+    var pos    = isNewFormat ? (p.pos || '') : (p.player_position_id || '');
+    var name   = isNewFormat ? (p.name || '') : (p.player_name || '');
+    if (posFilter !== 'ALL' && pos !== posFilter) return false;
+    if (searchQ.length > 1 && !name.toLowerCase().includes(searchQ)) return false;
     return true;
   });
 
@@ -7988,35 +8008,87 @@ function renderFPTiers() {
     return;
   }
 
-  const tierMap = {};
+  // Assign display tier
   filtered.forEach(function(p) {
-    const t = p.tier || 99;
+    if (isNewFormat) {
+      p._tier = p.fp_tier ? parseInt(p.fp_tier) : fpAdpTier(p.adp);
+    } else {
+      p._tier = parseInt(p.tier) || fpAdpTier(p.rank_ecr) || 10;
+    }
+  });
+
+  // Sort by tier, then ADP/ECR
+  filtered.sort(function(a, b) {
+    if (a._tier !== b._tier) return a._tier - b._tier;
+    var aAdp = isNewFormat ? (parseFloat(a.adp) || 999) : (a.rank_ecr || 999);
+    var bAdp = isNewFormat ? (parseFloat(b.adp) || 999) : (b.rank_ecr || 999);
+    return aAdp - bAdp;
+  });
+
+  // Group by tier
+  var tierMap = {};
+  filtered.forEach(function(p) {
+    var t = p._tier;
     if (!tierMap[t]) tierMap[t] = [];
     tierMap[t].push(p);
   });
 
-  const tierColors = ['var(--accent2)','#ff8c42','var(--accent3)','var(--win)','#6bb8ff','#c084fc','var(--muted)','var(--muted)','var(--muted)','var(--muted)'];
-  const tierNums = Object.keys(tierMap).map(Number).sort(function(a,b){return a-b;});
-  const rows = [];
+  var tierColors = ['#e03131','#e8590c','#f08c00','#2f9e44','#1971c2','#7048e8','#868e96','#868e96','#868e96','#868e96'];
+  var tierNums = Object.keys(tierMap).map(Number).sort(function(a,b){return a-b;});
+  var rows = [];
+
+  var SIGNAL_STYLES = {
+    'TARGET': 'background:#2f9e44;color:#fff;',
+    'AVOID':  'background:#c92a2a;color:#fff;',
+    'DART':   'background:#e67700;color:#fff;',
+  };
 
   tierNums.forEach(function(t) {
-    const color = tierColors[Math.min(t - 1, tierColors.length - 1)];
-    rows.push('<div class="qb-tier-label" style="color:' + color + ';"><span>Tier ' + t + '</span></div>');
+    var color = tierColors[Math.min(t - 1, tierColors.length - 1)];
+    var label = t <= 9 ? 'Tier ' + t : 'Late Round';
+    rows.push(
+      '<div class="qb-tier-label" style="color:' + color + ';border-left:3px solid ' + color + ';padding-left:10px;">' +
+        '<span>' + label + '</span>' +
+        '<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px;">' + tierMap[t].length + ' players</span>' +
+      '</div>'
+    );
     tierMap[t].forEach(function(p) {
-      const pos = p.player_position_id || '';
-      const posLower = pos.toLowerCase();
-      const rankAvg = p.rank_avg != null ? parseFloat(p.rank_avg).toFixed(1) : '—';
-      const rankMin = p.rank_min || '—';
-      const rankMax = p.rank_max || '—';
-      const posRank = p.pos_rank || '';
+      var pos, name, adpVal, msVal, signalRaw, fpTierBadge;
+      if (isNewFormat) {
+        pos        = p.pos || '';
+        name       = p.name || '';
+        adpVal     = p.adp ? parseFloat(p.adp).toFixed(1) : '—';
+        msVal      = p.ms  || '';
+        signalRaw  = String(p.signal || '');
+        fpTierBadge= p.fp_tier ? ('<span style="font-family:\'DM Mono\',monospace;font-size:9px;color:' + color + ';font-weight:700;min-width:18px;text-align:center;background:rgba(255,255,255,0.05);border-radius:3px;padding:1px 4px;" title="FP Tier">T' + p.fp_tier + '</span>') : '';
+      } else {
+        pos        = p.player_position_id || '';
+        name       = p.player_name || '';
+        adpVal     = p.rank_ecr || '—';
+        msVal      = '';
+        signalRaw  = '';
+        fpTierBadge= '';
+      }
+
+      var posLower = pos.toLowerCase();
+      var msNum    = parseInt(msVal) || 0;
+      var msColor  = msNum >= 90 ? 'var(--win)' : msNum >= 70 ? 'var(--accent3)' : msNum >= 50 ? 'var(--muted)' : 'var(--lose)';
+      var msDisplay= msNum ? '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:' + msColor + ';font-weight:700;min-width:36px;text-align:right;" title="Market Score">MS' + msNum + '</span>' : '';
+
+      // Signal badge
+      var sigDisplay = '';
+      if (signalRaw.includes('TARGET')) sigDisplay = '<span style="font-size:8px;font-weight:700;padding:2px 5px;border-radius:3px;' + SIGNAL_STYLES.TARGET + '">▲</span>';
+      else if (signalRaw.includes('AVOID')) sigDisplay = '<span style="font-size:8px;font-weight:700;padding:2px 5px;border-radius:3px;' + SIGNAL_STYLES.AVOID + '">▼</span>';
+      else if (signalRaw.includes('DART') || signalRaw.includes('🎯')) sigDisplay = '<span style="font-size:8px;font-weight:700;padding:2px 5px;border-radius:3px;' + SIGNAL_STYLES.DART + '">🎯</span>';
+
       rows.push(
-        '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);">' +
-          '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);min-width:24px;text-align:right;">' + (p.rank_ecr || '—') + '</span>' +
+        '<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);">' +
+          '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);min-width:30px;text-align:right;">' + adpVal + '</span>' +
           '<span class="asset-pos pos-' + posLower + '" style="font-size:9px;">' + pos + '</span>' +
-          '<span style="flex:1;font-size:13px;font-weight:600;">' + (p.player_name || '') + '</span>' +
-          '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);">' + (p.player_team_id || '') + '</span>' +
-          '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);min-width:40px;text-align:right;" title="Expert range">' + rankMin + '–' + rankMax + '</span>' +
-          '<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:' + color + ';font-weight:700;min-width:36px;text-align:right;" title="Avg expert rank">' + rankAvg + '</span>' +
+          '<span style="flex:1;font-size:13px;font-weight:600;">' + name + '</span>' +
+          sigDisplay +
+          fpTierBadge +
+          msDisplay +
         '</div>'
       );
     });
