@@ -1956,8 +1956,9 @@
     <span>Redraft</span>
   </div>
 
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
     <button class="sort-btn active" id="redraft-nav-rankings" onclick="showRedraftSection('rankings')">RANKINGS</button>
+    <button class="sort-btn" id="redraft-nav-tiers" onclick="showRedraftSection('tiers')">FP TIERS</button>
     <button class="sort-btn" id="redraft-nav-mine" onclick="showRedraftSection('mine')">MY PICKS</button>
   </div>
 
@@ -1984,6 +1985,30 @@
 
   <div id="redraft-mine-section" style="display:none;">
     <div id="redraftMyPicksList"></div>
+  </div>
+
+  <!-- FP TIERS SECTION -->
+  <div id="redraft-tiers-section" style="display:none;">
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;">FANTASYPROS API KEY</div>
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        <input type="password" id="fpApiKeyInput" placeholder="Enter your FP API key…" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;">
+        <button class="btn btn-ghost" onclick="saveFPKey()" style="font-size:11px;padding:6px 12px;">Save</button>
+        <button class="btn btn-primary" onclick="refreshFPTiers()" style="font-size:11px;padding:6px 12px;">↻ Fetch (1 token)</button>
+      </div>
+      <div id="fpApiStatus" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);min-height:14px;"></div>
+    </div>
+
+    <div class="pos-filter-row" id="fp-tier-pos-filters" style="margin-bottom:12px;">
+      <button class="pos-filter-btn active" onclick="filterFPTiers('ALL')">ALL</button>
+      <button class="pos-filter-btn qb" onclick="filterFPTiers('QB')">QB</button>
+      <button class="pos-filter-btn rb" onclick="filterFPTiers('RB')">RB</button>
+      <button class="pos-filter-btn wr" onclick="filterFPTiers('WR')">WR</button>
+      <button class="pos-filter-btn te" onclick="filterFPTiers('TE')">TE</button>
+      <input type="text" class="search-input" id="fpTierSearch" placeholder="Search player…" oninput="renderFPTiers()" style="flex:1;min-width:120px;max-width:200px;" />
+    </div>
+
+    <div id="fpTiersList"><div class="empty-state" style="padding:30px;">Enter your FantasyPros API key above and click Fetch.</div></div>
   </div>
 </div>
 
@@ -7833,15 +7858,167 @@ let redraftSortCol = 'ms';
 
 function showRedraftSection(s) {
   const rankingsBtn = document.getElementById('redraft-nav-rankings');
-  const mineBtn = document.getElementById('redraft-nav-mine');
+  const tiersBtn    = document.getElementById('redraft-nav-tiers');
+  const mineBtn     = document.getElementById('redraft-nav-mine');
   const rankingsSec = document.getElementById('redraft-rankings-section');
-  const mineSec = document.getElementById('redraft-mine-section');
+  const tiersSec    = document.getElementById('redraft-tiers-section');
+  const mineSec     = document.getElementById('redraft-mine-section');
   if (rankingsBtn) rankingsBtn.classList.toggle('active', s === 'rankings');
-  if (mineBtn) mineBtn.classList.toggle('active', s === 'mine');
+  if (tiersBtn)    tiersBtn.classList.toggle('active', s === 'tiers');
+  if (mineBtn)     mineBtn.classList.toggle('active', s === 'mine');
   if (rankingsSec) rankingsSec.style.display = s === 'rankings' ? 'block' : 'none';
-  if (mineSec) mineSec.style.display = s === 'mine' ? 'block' : 'none';
+  if (tiersSec)    tiersSec.style.display    = s === 'tiers'    ? 'block' : 'none';
+  if (mineSec)     mineSec.style.display     = s === 'mine'     ? 'block' : 'none';
   if (s === 'rankings') renderRedraftRankings();
+  else if (s === 'tiers') initFPTiersSection();
   else renderRedraftMyPicks();
+}
+
+// ── FantasyPros Live API — Tiers ─────────────────────────────────────────────
+const FP_CACHE_KEY = 'fp_ecr_cache_v1';
+const FP_CACHE_TTL = 24 * 60 * 60 * 1000;
+let fpLiveData = null;
+let fpTierPosFilter = 'ALL';
+
+function getFPApiKey() { return localStorage.getItem('fp_api_key') || ''; }
+
+function saveFPKey() {
+  const input = document.getElementById('fpApiKeyInput');
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) return;
+  localStorage.setItem('fp_api_key', val);
+  input.value = '';
+  input.placeholder = 'Key saved ✓';
+  setFPStatus('API key saved. Click Fetch to load rankings.');
+}
+
+function setFPStatus(msg, isError) {
+  const el = document.getElementById('fpApiStatus');
+  if (el) { el.textContent = msg; el.style.color = isError ? 'var(--lose)' : 'var(--muted)'; }
+}
+
+function getFPCached() {
+  try {
+    const raw = localStorage.getItem(FP_CACHE_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (Date.now() - obj.timestamp > FP_CACHE_TTL) return null;
+    return obj.data;
+  } catch(e) { return null; }
+}
+
+function initFPTiersSection() {
+  const key = getFPApiKey();
+  const input = document.getElementById('fpApiKeyInput');
+  if (key && input) input.placeholder = 'Key saved ✓';
+
+  const cached = getFPCached();
+  if (cached) {
+    fpLiveData = cached;
+    const ago = Math.round((Date.now() - JSON.parse(localStorage.getItem(FP_CACHE_KEY)).timestamp) / 60000);
+    const agoStr = ago < 2 ? 'just now' : ago < 60 ? ago + 'm ago' : Math.round(ago / 60) + 'h ago';
+    setFPStatus('Cached data from ' + agoStr + ' · click Fetch to refresh (uses 1 token)');
+    renderFPTiers();
+  } else if (key) {
+    setFPStatus('No cached data — click Fetch to load (uses 1 token)');
+    renderFPTiers();
+  } else {
+    setFPStatus('Enter your FantasyPros API key and click Fetch.');
+    renderFPTiers();
+  }
+}
+
+async function refreshFPTiers() {
+  const key = getFPApiKey();
+  if (!key) { setFPStatus('Save your API key first.', true); return; }
+  setFPStatus('Fetching from FantasyPros…');
+  try {
+    const year = new Date().getFullYear();
+    const resp = await fetch(
+      'https://api.fantasypros.com/public/v2/json/nfl/' + year + '/consensus-rankings?position=OP&scoring=PPR&limit=300&count=300',
+      { headers: { 'x-api-key': key } }
+    );
+    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' — check your key or token limit');
+    const data = await resp.json();
+    fpLiveData = data;
+    localStorage.setItem(FP_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: data }));
+    const count = (data.players || []).length;
+    setFPStatus('Updated just now · ' + count + ' players · 1 token used');
+    renderFPTiers();
+  } catch(e) {
+    setFPStatus('Error: ' + e.message, true);
+  }
+}
+
+function filterFPTiers(pos) {
+  fpTierPosFilter = pos;
+  document.querySelectorAll('#fp-tier-pos-filters .pos-filter-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.textContent.trim() === pos || (pos === 'ALL' && btn.textContent.trim() === 'ALL'));
+  });
+  renderFPTiers();
+}
+
+function renderFPTiers() {
+  const container = document.getElementById('fpTiersList');
+  if (!container) return;
+
+  const data = fpLiveData || getFPCached();
+  if (!data) {
+    container.innerHTML = '<div class="empty-state" style="padding:30px;">No data yet — enter your API key and click Fetch.</div>';
+    return;
+  }
+
+  const players = data.players || [];
+  const posFilter = fpTierPosFilter || 'ALL';
+  const searchQ = (document.getElementById('fpTierSearch') ? document.getElementById('fpTierSearch').value : '').toLowerCase();
+
+  const filtered = players.filter(function(p) {
+    if (posFilter !== 'ALL' && p.player_position_id !== posFilter) return false;
+    if (searchQ.length > 1 && !(p.player_name || '').toLowerCase().includes(searchQ)) return false;
+    return true;
+  });
+
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:30px;">No players found.</div>';
+    return;
+  }
+
+  const tierMap = {};
+  filtered.forEach(function(p) {
+    const t = p.tier || 99;
+    if (!tierMap[t]) tierMap[t] = [];
+    tierMap[t].push(p);
+  });
+
+  const tierColors = ['var(--accent2)','#ff8c42','var(--accent3)','var(--win)','#6bb8ff','#c084fc','var(--muted)','var(--muted)','var(--muted)','var(--muted)'];
+  const tierNums = Object.keys(tierMap).map(Number).sort(function(a,b){return a-b;});
+  const rows = [];
+
+  tierNums.forEach(function(t) {
+    const color = tierColors[Math.min(t - 1, tierColors.length - 1)];
+    rows.push('<div class="qb-tier-label" style="color:' + color + ';"><span>Tier ' + t + '</span></div>');
+    tierMap[t].forEach(function(p) {
+      const pos = p.player_position_id || '';
+      const posLower = pos.toLowerCase();
+      const rankAvg = p.rank_avg != null ? parseFloat(p.rank_avg).toFixed(1) : '—';
+      const rankMin = p.rank_min || '—';
+      const rankMax = p.rank_max || '—';
+      const posRank = p.pos_rank || '';
+      rows.push(
+        '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);">' +
+          '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);min-width:24px;text-align:right;">' + (p.rank_ecr || '—') + '</span>' +
+          '<span class="asset-pos pos-' + posLower + '" style="font-size:9px;">' + pos + '</span>' +
+          '<span style="flex:1;font-size:13px;font-weight:600;">' + (p.player_name || '') + '</span>' +
+          '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);">' + (p.player_team_id || '') + '</span>' +
+          '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);min-width:40px;text-align:right;" title="Expert range">' + rankMin + '–' + rankMax + '</span>' +
+          '<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:' + color + ';font-weight:700;min-width:36px;text-align:right;" title="Avg expert rank">' + rankAvg + '</span>' +
+        '</div>'
+      );
+    });
+  });
+
+  container.innerHTML = rows.join('');
 }
 
 function filterRedraft(pos) {
