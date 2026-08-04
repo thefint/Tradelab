@@ -1990,12 +1990,15 @@
   <!-- FP TIERS SECTION -->
   <div id="redraft-tiers-section" style="display:none;">
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
         <div>
           <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:2px;">FANTASYPROS LIVE TIERS</div>
-          <div style="font-size:11px;color:var(--muted);">Data synced from your Google Sheet · updated daily at 6am</div>
+          <div style="font-size:11px;color:var(--muted);">Pulled from your Google Sheet · refreshes daily at 6am</div>
         </div>
-        <button class="btn btn-primary" onclick="refreshFPTiers()" style="font-size:11px;padding:6px 14px;">↻ Sync from Sheet</button>
+        <button class="btn btn-primary" onclick="refreshFPTiers()" style="font-size:11px;padding:6px 14px;">↻ Sync</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="text" id="fpWebAppUrl" placeholder="Paste your Google Apps Script Web App URL here…" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;" oninput="saveFPWebAppUrl()" />
       </div>
       <div id="fpApiStatus" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);min-height:14px;margin-top:6px;"></div>
     </div>
@@ -7875,16 +7878,23 @@ function showRedraftSection(s) {
   else renderRedraftMyPicks();
 }
 
-// ── FP Tiers — synced from Google Sheet (no API key in browser) ───────────────
-const FP_CACHE_KEY = 'fp_sheet_cache_v2';
-const FP_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
-const FP_SHEET_ID  = '1_DMatHAuvFEvDou97RPocjTh5M01Ca_YMZ21_IClnyk';
+// ── FP Tiers — synced via Google Apps Script Web App ─────────────────────────
+const FP_CACHE_KEY   = 'fp_webapp_cache_v1';
+const FP_CACHE_TTL   = 6 * 60 * 60 * 1000;
+const FP_WEBAPP_KEY  = 'fp_webapp_url';
 let fpLiveData = null;
 let fpTierPosFilter = 'ALL';
 
 function setFPStatus(msg, isError) {
   const el = document.getElementById('fpApiStatus');
   if (el) { el.textContent = msg; el.style.color = isError ? 'var(--lose)' : 'var(--muted)'; }
+}
+
+function saveFPWebAppUrl() {
+  const input = document.getElementById('fpWebAppUrl');
+  if (!input) return;
+  const val = input.value.trim();
+  if (val) localStorage.setItem(FP_WEBAPP_KEY, val);
 }
 
 function getFPCached() {
@@ -7898,79 +7908,51 @@ function getFPCached() {
 }
 
 function initFPTiersSection() {
+  // Pre-fill Web App URL input if saved
+  const savedUrl = localStorage.getItem(FP_WEBAPP_KEY) || '';
+  const input = document.getElementById('fpWebAppUrl');
+  if (input && savedUrl) input.value = savedUrl;
+
   const cached = getFPCached();
   if (cached) {
     fpLiveData = cached;
     try {
       const ago = Math.round((Date.now() - JSON.parse(localStorage.getItem(FP_CACHE_KEY)).timestamp) / 60000);
       const agoStr = ago < 2 ? 'just now' : ago < 60 ? ago + 'm ago' : Math.round(ago / 60) + 'h ago';
-      setFPStatus('Last synced ' + agoStr + ' · ' + (cached.players || []).length + ' players');
+      const count = (cached.players || []).length;
+      setFPStatus('Last synced ' + agoStr + ' · ' + count + ' players loaded' + (cached.updated ? ' · Sheet updated ' + cached.updated : ''));
     } catch(e) {}
     renderFPTiers();
+  } else if (savedUrl) {
+    setFPStatus('Web App URL saved — click Sync to load tiers.');
+    renderFPTiers();
   } else {
-    setFPStatus('Click "Sync from Sheet" to load live tier data.');
+    setFPStatus('Paste your Web App URL above, then click Sync.');
     renderFPTiers();
   }
 }
 
 async function refreshFPTiers() {
+  const url = (localStorage.getItem(FP_WEBAPP_KEY) || '').trim();
+  if (!url) {
+    setFPStatus('Paste your Google Apps Script Web App URL in the box above first.', true);
+    return;
+  }
   setFPStatus('Syncing from Google Sheet…');
-  const url = 'https://docs.google.com/spreadsheets/d/' + FP_SHEET_ID +
-              '/gviz/tq?tqx=out:csv&sheet=FP%20TIERS';
   try {
     const resp = await fetch(url);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const text = await resp.text();
-    const players = parseSheetCSV(text);
-    if (!players.length) throw new Error('No data found in FP TIERS tab — run the Apps Script first.');
-    fpLiveData = { players: players };
-    localStorage.setItem(FP_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: { players: players } }));
-    setFPStatus('Synced just now · ' + players.length + ' players loaded');
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    if (!data.players || !data.players.length) throw new Error('No players — run Refresh FP Tiers in your Google Sheet first.');
+    fpLiveData = data;
+    localStorage.setItem(FP_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: data }));
+    const count = data.players.length;
+    setFPStatus('Synced just now · ' + count + ' players loaded' + (data.updated ? ' · Sheet updated ' + data.updated : ''));
     renderFPTiers();
   } catch(e) {
-    setFPStatus('Sync failed: ' + e.message + ' · Make sure your Google Sheet is shared as "Anyone with the link can view"', true);
+    setFPStatus('Sync failed: ' + e.message, true);
   }
-}
-
-function parseSheetCSV(text) {
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) return [];
-  const players = [];
-  for (var i = 1; i < lines.length; i++) {
-    var cols = parseCSVLine(lines[i]);
-    if (!cols[3] || cols[3].toUpperCase() === 'PLAYER') continue;
-    var tier   = parseInt(cols[0]) || 99;
-    var ecr    = parseInt(cols[1]) || null;
-    var pos    = (cols[2] || '').replace(/"/g, '').trim();
-    var name   = (cols[3] || '').replace(/"/g, '').trim();
-    var team   = (cols[4] || '').replace(/"/g, '').trim();
-    var range  = (cols[5] || '').replace(/"/g, '').trim();
-    var avg    = parseFloat(cols[6]) || null;
-    var parts  = range.split(/[–—\-]/);
-    players.push({
-      tier: tier,
-      rank_ecr: ecr,
-      player_position_id: pos,
-      player_name: name,
-      player_team_id: team,
-      rank_min: parts[0] ? parseInt(parts[0]) : null,
-      rank_max: parts[1] ? parseInt(parts[1]) : null,
-      rank_avg: avg,
-    });
-  }
-  return players;
-}
-
-function parseCSVLine(line) {
-  var result = [], cur = '', inQ = false;
-  for (var i = 0; i < line.length; i++) {
-    var ch = line[i];
-    if (ch === '"') { inQ = !inQ; continue; }
-    if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; continue; }
-    cur += ch;
-  }
-  result.push(cur.trim());
-  return result;
 }
 
 function filterFPTiers(pos) {
