@@ -1529,6 +1529,7 @@
   <!-- Tab Navigation -->
   <div class="tab-nav" id="tabNav" style="display:none;">
     <button class="tab-btn active" onclick="showTab('trade')">🔄 TRADE</button>
+    <button class="tab-btn" onclick="showTab('live')">🔴 LIVE</button>
     <button class="tab-btn" onclick="showTab('buysell')">📈 BUY/SELL</button>
         <button class="tab-btn" onclick="showTab('sos')">📅 SOS</button>
     <button class="tab-btn" onclick="showTab('players')">⭐ PLAYERS</button>
@@ -1735,6 +1736,48 @@
 
 </div><!-- end tab-trade -->
 
+<!-- TAB: LIVE DRAFT -->
+<div id="tab-live" style="display:none;">
+  <div class="tab-section-header"><span>Live Draft</span></div>
+
+  <div id="liveDraftSetup" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;">
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;">CONNECT TO A LIVE OR IN-PROGRESS SLEEPER DRAFT</div>
+    <div style="display:flex;gap:10px;margin-bottom:8px;align-items:stretch;">
+      <input id="liveDraftIdInput" type="text" placeholder="Paste Sleeper draft ID or URL…" style="flex:1;min-width:0;background:var(--surface);border:2px solid var(--accent);border-radius:999px;padding:20px 28px;color:var(--text);font-size:16px;height:64px;box-sizing:border-box;">
+      <select id="liveFormatSelect" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 12px;color:var(--text);font-size:12px;">
+        <option value="redraft" selected>Redraft SF</option>
+        <option value="redraft_1qb">Redraft 1QB</option>
+        <option value="dynasty">Dynasty</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="connectLiveDraft()" style="width:100%;font-size:12px;padding:10px;">🔴 Connect &amp; Start Tracking</button>
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:8px;">Polls Sleeper every 15s while this tab is open. Works on your real league draft or any mock — live or already completed.</div>
+  </div>
+
+  <div id="liveDraftActive" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div id="liveDraftStatus" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);"></div>
+      <button class="btn btn-ghost" onclick="disconnectLiveDraft()" style="font-size:10px;padding:5px 10px;color:var(--lose);">✕ Disconnect</button>
+    </div>
+    <div id="liveOnClock" style="margin-bottom:14px;"></div>
+    <div id="liveAlertBanner" style="margin-bottom:10px;"></div>
+    <div id="liveTargetsPanel" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:12px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;">MY TARGETS</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <input id="liveTargetName" placeholder="Player name" style="flex:1;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 9px;font-size:12px;color:var(--text);font-family:'DM Mono',monospace;">
+        <input id="liveTargetRound" type="number" placeholder="Rd" min="1" max="25" style="width:52px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--text);font-family:'DM Mono',monospace;text-align:center;">
+        <button class="btn" onclick="addLiveTarget()" style="font-size:11px;padding:6px 12px;">+ Add</button>
+      </div>
+      <div id="liveTargetList" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:12px;">
+      <button class="sort-btn active" id="live-nav-avail" onclick="showLiveSection('avail')">BEST AVAILABLE</button>
+      <button class="sort-btn" id="live-nav-team" onclick="showLiveSection('team')">MY TEAM</button>
+    </div>
+    <div id="liveDraftContent"></div>
+  </div>
+</div>
+
 <!-- TAB: SOS -->
 <div id="tab-sos" style="display:none;">
   <div class="tab-section-header">
@@ -1796,13 +1839,13 @@
       </div>
     </div>
 
-    <div style="display:flex;gap:6px;margin-bottom:6px;">
-      <input id="mockTabDraftInput" type="text" placeholder="Paste Sleeper draft ID or URL…" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;">
-      <select id="mockTabFormatSelect" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;">
+    <div style="display:flex;gap:10px;margin-bottom:6px;align-items:stretch;">
+      <input id="mockTabDraftInput" type="text" placeholder="Paste Sleeper draft ID or URL…" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:16px 20px;color:var(--text);font-size:14px;">
+      <select id="mockTabFormatSelect" style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 12px;color:var(--text);font-size:12px;">
         <option value="redraft" selected>Redraft</option>
         <option value="dynasty">Dynasty</option>
       </select>
-      <button class="btn btn-primary" onclick="addMockDraftFromTab()" style="font-size:11px;padding:6px 12px;">+ Add</button>
+      <button class="btn btn-primary" onclick="addMockDraftFromTab()" style="font-size:12px;padding:16px 16px;border-radius:12px;white-space:nowrap;">+ Add</button>
     </div>
     <label style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;">
       <input type="checkbox" id="mockTabPracticeToggle" style="accent-color:var(--accent);">
@@ -1956,9 +1999,8 @@
     <span>Redraft</span>
   </div>
 
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
     <button class="sort-btn active" id="redraft-nav-rankings" onclick="showRedraftSection('rankings')">RANKINGS</button>
-    <button class="sort-btn" id="redraft-nav-tiers" onclick="showRedraftSection('tiers')">FP TIERS</button>
     <button class="sort-btn" id="redraft-nav-mine" onclick="showRedraftSection('mine')">MY PICKS</button>
   </div>
 
@@ -1985,34 +2027,6 @@
 
   <div id="redraft-mine-section" style="display:none;">
     <div id="redraftMyPicksList"></div>
-  </div>
-
-  <!-- FP TIERS SECTION -->
-  <div id="redraft-tiers-section" style="display:none;">
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
-        <div>
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:2px;">FANTASYPROS LIVE TIERS</div>
-          <div style="font-size:11px;color:var(--muted);">Pulled from your Google Sheet · refreshes daily at 6am</div>
-        </div>
-        <button class="btn btn-primary" onclick="refreshFPTiers()" style="font-size:11px;padding:6px 14px;">↻ Sync</button>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input type="text" id="fpWebAppUrl" placeholder="Paste your Google Apps Script Web App URL here…" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-size:11px;font-family:'DM Mono',monospace;" oninput="saveFPWebAppUrl()" />
-      </div>
-      <div id="fpApiStatus" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);min-height:14px;margin-top:6px;"></div>
-    </div>
-
-    <div class="pos-filter-row" id="fp-tier-pos-filters" style="margin-bottom:12px;">
-      <button class="pos-filter-btn active" onclick="filterFPTiers('ALL')">ALL</button>
-      <button class="pos-filter-btn qb" onclick="filterFPTiers('QB')">QB</button>
-      <button class="pos-filter-btn rb" onclick="filterFPTiers('RB')">RB</button>
-      <button class="pos-filter-btn wr" onclick="filterFPTiers('WR')">WR</button>
-      <button class="pos-filter-btn te" onclick="filterFPTiers('TE')">TE</button>
-      <input type="text" class="search-input" id="fpTierSearch" placeholder="Search player…" oninput="renderFPTiers()" style="flex:1;min-width:120px;max-width:200px;" />
-    </div>
-
-    <div id="fpTiersList"><div class="empty-state" style="padding:30px;">Enter your FantasyPros API key above and click Fetch.</div></div>
   </div>
 </div>
 
@@ -2088,11 +2102,11 @@
     </select>
     <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">TEAMS</span>
     <select id="dr-teams" onchange="renderDraftRoom()" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:3px 7px;font-family:'DM Mono',monospace;">
-      <option>8</option><option>10</option><option selected>12</option><option>14</option><option>16</option>
+      <option>8</option><option>10</option><option>12</option><option selected>14</option><option>16</option>
     </select>
     <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">ROUNDS</span>
     <select id="dr-rounds" onchange="renderDraftRoom()" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:3px 7px;font-family:'DM Mono',monospace;">
-      <option>12</option><option>14</option><option selected>16</option><option>18</option><option>20</option>
+      <option>12</option><option selected>14</option><option>16</option><option>18</option><option>20</option>
     </select>
   </div>
   <div style="display:flex;gap:6px;margin-bottom:10px;">
@@ -3091,6 +3105,278 @@ function buildStartingFormatSummary(positions) {
     if (!order.includes(k)) parts.push(counts[k] + ' ' + (labelMap[k] || k));
   });
   return parts.join(', ');
+}
+
+// ── Live Draft ────────────────────────────────────────────────────────────
+// Polls Sleeper's real picks endpoint every 15s while connected — this is
+// the same endpoint used elsewhere in the app, just re-fetched on a timer.
+// There's no push/websocket from a static page, so this is "auto-refresh,"
+// not true real-time — functionally the same as you hitting refresh, just
+// automatic. Works on an actual in-progress league draft or a live mock.
+let liveDraftId = null;
+let liveTeams = 14;
+let liveRounds = 14;
+let livePicks = [];
+let liveInterval = null;
+let liveMySlot = null;
+let liveFormat = 'redraft';
+let liveSection = 'avail';
+let myDraftTargets = []; // [{name, normName, targetRound}]
+
+function normLive(n) {
+  return String(n || '').toLowerCase().replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function addLiveTarget() {
+  const nameEl = document.getElementById('liveTargetName');
+  const rdEl = document.getElementById('liveTargetRound');
+  const name = (nameEl ? nameEl.value : '').trim();
+  const rd = parseInt(rdEl ? rdEl.value : '');
+  if (!name || !rd || rd < 1) return;
+  myDraftTargets.push({ name: name, normName: normLive(name), targetRound: rd });
+  if (nameEl) nameEl.value = '';
+  if (rdEl) rdEl.value = '';
+  renderLiveTargets();
+  renderLiveDraft();
+}
+
+function removeLiveTarget(i) {
+  myDraftTargets.splice(i, 1);
+  renderLiveTargets();
+  renderLiveDraft();
+}
+
+function renderLiveTargets() {
+  const el = document.getElementById('liveTargetList');
+  if (!el) return;
+  if (!myDraftTargets.length) {
+    el.innerHTML = '<span style="font-size:11px;color:var(--muted);font-family:\'DM Mono\',monospace;">No targets added</span>';
+    return;
+  }
+  el.innerHTML = myDraftTargets.map(function(t, i) {
+    return '<div style="display:inline-flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 8px;">' +
+      '<span style="font-size:11px;">' + t.name + '</span>' +
+      '<span style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--muted);">R' + t.targetRound + '</span>' +
+      '<button onclick="removeLiveTarget(' + i + ')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0 2px;line-height:1;">×</button>' +
+    '</div>';
+  }).join('');
+}
+
+function getLiveDraftAlerts(available, currentRound, taken) {
+  const alerts = [];
+
+  // Target alerts — only fire when currentRound is within 1 of targetRound
+  myDraftTargets.forEach(function(t) {
+    if (currentRound >= t.targetRound - 1 && currentRound <= t.targetRound + 1) {
+      if (!taken.has(t.normName)) {
+        const urgency = currentRound === t.targetRound ? '🔴' : '🟡';
+        alerts.push({ type: 'target', urgency: urgency, text: t.name + ' still available — your R' + t.targetRound + ' target' });
+      }
+    }
+  });
+
+  // Tier drop alerts — per position, find biggest ADP gap in top 8 available
+  ['QB', 'RB', 'WR', 'TE'].forEach(function(pos) {
+    const posAvail = available
+      .filter(function(p) { return p.pos === pos && p.adp != null; })
+      .sort(function(a, b) { return a.adp - b.adp; })
+      .slice(0, 8);
+    if (posAvail.length < 3) return;
+
+    let maxGap = 0, maxGapIdx = 1;
+    for (let i = 1; i < posAvail.length; i++) {
+      const gap = posAvail[i].adp - posAvail[i - 1].adp;
+      if (gap > maxGap) { maxGap = gap; maxGapIdx = i; }
+    }
+
+    // Alert if there's a meaningful tier break and only 1–2 players above it
+    if (maxGap >= 10 && maxGapIdx <= 2) {
+      const topPlayers = posAvail.slice(0, maxGapIdx).map(function(p) { return p.name; }).join(' & ');
+      alerts.push({ type: 'tier', urgency: '⚠️', text: pos + ' tier drop: only ' + topPlayers + ' left before a big gap (ADP +' + Math.round(maxGap) + ')' });
+    }
+  });
+
+  return alerts;
+}
+
+async function connectLiveDraft() {
+  const input = document.getElementById('liveDraftIdInput');
+  const raw = (input ? input.value : '').trim();
+  const match = raw.match(/(\d{15,})/);
+  const draftId = match ? match[1] : raw.replace(/\D/g,'');
+  if (!draftId || draftId.length < 10) { setStatus('Invalid draft ID or URL', 'error'); return; }
+
+  liveFormat = document.getElementById('liveFormatSelect').value;
+
+  try {
+    const metaRes = await fetch('https://api.sleeper.app/v1/draft/' + draftId);
+    if (!metaRes.ok) throw new Error('Draft not found');
+    const meta = await metaRes.json();
+    liveTeams = (meta.settings && meta.settings.teams) || 12;
+    liveRounds = (meta.settings && meta.settings.rounds) || 16;
+
+    if (!Object.keys(playerData).length) {
+      const pRes = await fetch('https://api.sleeper.app/v1/players/nfl');
+      playerData = await pRes.json();
+    }
+
+    const slotStr = prompt('Which draft slot number are you? (1-' + liveTeams + ')');
+    const slot = parseInt(slotStr);
+    liveMySlot = (slot && slot >= 1 && slot <= liveTeams) ? slot : null;
+
+    liveDraftId = draftId;
+    document.getElementById('liveDraftSetup').style.display = 'none';
+    document.getElementById('liveDraftActive').style.display = 'block';
+
+    await pollLiveDraft();
+    if (liveInterval) clearInterval(liveInterval);
+    liveInterval = setInterval(pollLiveDraft, 15000);
+  } catch(e) {
+    setStatus('Failed to connect: ' + e.message, 'error');
+  }
+}
+
+async function pollLiveDraft() {
+  if (!liveDraftId) return;
+  try {
+    const res = await fetch('https://api.sleeper.app/v1/draft/' + liveDraftId + '/picks');
+    if (!res.ok) return;
+    const picks = await res.json();
+    livePicks = picks.map(function(p) {
+      const player = playerData[p.player_id];
+      const name = player ? (player.first_name + ' ' + player.last_name).trim()
+        : (p.metadata && p.metadata.first_name ? (p.metadata.first_name + ' ' + p.metadata.last_name).trim() : null);
+      return name ? { name: name, overall: p.pick_no, round: p.round, slot: p.draft_slot,
+                       pos: (player && player.position) || (p.metadata && p.metadata.position) || '?' } : null;
+    }).filter(Boolean);
+    renderLiveDraft();
+  } catch(e) {
+    console.warn('Live draft poll failed:', e.message);
+  }
+}
+
+function disconnectLiveDraft() {
+  if (liveInterval) clearInterval(liveInterval);
+  liveInterval = null;
+  liveDraftId = null;
+  livePicks = [];
+  document.getElementById('liveDraftSetup').style.display = 'block';
+  document.getElementById('liveDraftActive').style.display = 'none';
+}
+
+function showLiveSection(s) {
+  liveSection = s;
+  const availBtn = document.getElementById('live-nav-avail');
+  const teamBtn = document.getElementById('live-nav-team');
+  if (availBtn) availBtn.classList.toggle('active', s === 'avail');
+  if (teamBtn) teamBtn.classList.toggle('active', s === 'team');
+  renderLiveDraft();
+}
+
+function liveSnakeSlot(overall) {
+  const round = Math.ceil(overall / liveTeams);
+  const posInRound = overall - (round - 1) * liveTeams;
+  return (round % 2 === 1) ? posInRound : (liveTeams - posInRound + 1);
+}
+
+function renderLiveDraft() {
+  const statusEl = document.getElementById('liveDraftStatus');
+  const clockEl = document.getElementById('liveOnClock');
+  const contentEl = document.getElementById('liveDraftContent');
+  if (!statusEl) return;
+
+  const totalPicks = liveTeams * liveRounds;
+  const madeSoFar = livePicks.length;
+  statusEl.textContent = madeSoFar + ' / ' + totalPicks + ' picks made · updates every 15s';
+
+  if (madeSoFar >= totalPicks) {
+    clockEl.innerHTML = '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;font-family:\'DM Mono\',monospace;font-size:12px;color:var(--muted);">Draft complete.</div>';
+  } else {
+    const nextOverall = madeSoFar + 1;
+    const nextSlot = liveSnakeSlot(nextOverall);
+    const nextRound = Math.ceil(nextOverall / liveTeams);
+    const isMe = liveMySlot && nextSlot === liveMySlot;
+    clockEl.innerHTML = '<div style="background:' + (isMe ? 'rgba(0,229,160,0.1)' : 'var(--surface2)') + ';border:1px solid ' + (isMe ? 'var(--accent)' : 'var(--border)') + ';border-radius:8px;padding:14px;text-align:center;">' +
+      (isMe ? '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--accent);letter-spacing:2px;">🔴 YOU\'RE ON THE CLOCK</div>' : '<div style="font-family:\'DM Mono\',monospace;font-size:13px;color:var(--text);">On the clock: Slot ' + nextSlot + '</div>') +
+      '<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--muted);margin-top:4px;">Round ' + nextRound + ' · Pick #' + nextOverall + '</div>' +
+    '</div>';
+  }
+
+  const taken = new Set(livePicks.map(function(p){ return normLive(p.name); }));
+
+  // Compute current round for alert window
+  const currentRound = madeSoFar >= liveTeams * liveRounds ? liveRounds
+    : Math.ceil((madeSoFar + 1) / liveTeams);
+
+  // Build full available board and fire alerts
+  const alertBannerEl = document.getElementById('liveAlertBanner');
+  if (alertBannerEl) {
+    const boardForAlerts = liveFormat === 'redraft' ? getRedraftBoard() : liveFormat === 'redraft_1qb' ? getRedraft1QBBoard() : getDRPlayers();
+    const availableForAlerts = boardForAlerts
+      .filter(function(p){ return !taken.has(p.key); })
+      .sort(function(a,b){ return (a.adp ?? 9999) - (b.adp ?? 9999); });
+    const alerts = getLiveDraftAlerts(availableForAlerts, currentRound, taken);
+    if (alerts.length) {
+      alertBannerEl.innerHTML = alerts.map(function(a) {
+        const bg = a.type === 'target' ? 'rgba(0,229,160,0.08)' : 'rgba(255,193,7,0.08)';
+        const border = a.type === 'target' ? 'var(--win)' : 'var(--accent3)';
+        return '<div style="display:flex;align-items:center;gap:8px;background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;padding:9px 12px;margin-bottom:6px;">' +
+          '<span style="font-size:14px;">' + a.urgency + '</span>' +
+          '<span style="font-size:12px;font-family:\'DM Mono\',monospace;color:var(--text);">' + a.text + '</span>' +
+        '</div>';
+      }).join('');
+    } else {
+      alertBannerEl.innerHTML = '';
+    }
+  }
+
+  if (liveSection === 'avail') {
+    const board = liveFormat === 'redraft' ? getRedraftBoard() : liveFormat === 'redraft_1qb' ? getRedraft1QBBoard() : getDRPlayers();
+    const available = board.filter(function(p){ return !taken.has(p.key); })
+      .sort(function(a,b){ return (a.adp ?? 9999) - (b.adp ?? 9999); })
+      .slice(0, 25);
+
+    const rows = available.map(function(p) {
+      const lrfg = getLRFG(p.key);
+      const lrfgTag = lrfg ? '<span style="font-size:9px;color:' + (lrfg.s==='target'?'var(--win)':lrfg.s==='avoid'?'var(--lose)':'var(--accent3)') + ';margin-left:4px;">' + (lrfg.s==='target'?'▲':lrfg.s==='avoid'?'▼':'🎯') + lrfg.c + '</span>' : '';
+      let epaTag = '';
+      if (p.pos === 'QB') {
+        const epa = QB_EPA_DB[p.key];
+        if (epa) {
+          const reliable = epa.starts >= 8;
+          epaTag = '<span style="font-size:9px;font-family:\'DM Mono\',monospace;margin-left:4px;color:' + (reliable ? (epa.epaDb>=0.15?'var(--win)':epa.epaDb<0?'var(--lose)':'var(--muted)') : 'var(--accent3)') + ';" title="EPA/dropback, ' + epa.starts + ' starts">' + (reliable?'':'⚠') + epa.epaDb.toFixed(2) + '</span>';
+        }
+      }
+      const adpTxt = p.adp != null ? p.adp.toFixed(1) : '—';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);">' +
+        '<span class="asset-pos pos-' + p.pos + '" style="font-size:9px;">' + p.pos + '</span>' +
+        '<span style="flex:1;font-size:13px;font-weight:600;">' + p.name + lrfgTag + epaTag + '</span>' +
+        '<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--muted);">ADP ' + adpTxt + '</span>' +
+      '</div>';
+    }).join('');
+    contentEl.innerHTML = rows || '<div class="empty-state" style="padding:30px;">No board data available.</div>';
+  } else {
+    if (!liveMySlot) {
+      contentEl.innerHTML = '<div class="empty-state" style="padding:30px;">No slot set — reconnect and enter your slot number.</div>';
+      return;
+    }
+    const myPicks = livePicks.filter(function(p){ return p.slot === liveMySlot; });
+    const posCounts = { QB: 0, RB: 0, WR: 0, TE: 0, DST: 0 };
+    myPicks.forEach(function(p){ if (posCounts[p.pos] != null) posCounts[p.pos]++; });
+    const posBar = Object.keys(posCounts).map(function(pos) {
+      const short = posCounts[pos] < (SF_TARGET_PROFILE[pos] || 0);
+      return '<div style="text-align:center;flex:1;"><span class="asset-pos pos-' + pos + '" style="font-size:9px;">' + pos + '</span>' +
+        '<div style="font-family:\'DM Mono\',monospace;font-size:14px;font-weight:700;margin-top:4px;color:' + (short?'var(--accent2)':'var(--text)') + ';">' + posCounts[pos] + '</div></div>';
+    }).join('');
+    const rows = myPicks.slice().sort(function(a,b){ return a.overall - b.overall; }).map(function(p) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);">' +
+        '<span class="asset-pos pos-' + p.pos + '" style="font-size:9px;">' + p.pos + '</span>' +
+        '<span style="flex:1;font-size:13px;">' + p.name + '</span>' +
+        '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);">R' + p.round + ' · #' + p.overall + '</span>' +
+      '</div>';
+    }).join('');
+    contentEl.innerHTML = '<div style="display:flex;gap:6px;margin-bottom:14px;">' + posBar + '</div>' + (rows || '<div class="empty-state" style="padding:20px;">No picks yet.</div>');
+  }
 }
 
 async function loadRoster() {
@@ -4276,12 +4562,12 @@ function renderBalanceSuggestion() {
 
 // ── Tab Navigation ────────────────────────────────────────────────────────
 function showTab(name) {
-  ['trade','buysell','sos','players','redraft','history','darts','mock','draftroom','rankings'].forEach(t => {
+  ['trade','live','buysell','sos','players','redraft','history','darts','mock','draftroom','rankings'].forEach(t => {
     const el = document.getElementById(`tab-${t}`);
     if (el) el.style.display = t === name ? 'block' : 'none';
   });
   document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', ['trade','buysell','sos','players','redraft','history','darts','mock','draftroom','rankings'][i] === name);
+    btn.classList.toggle('active', ['trade','live','buysell','sos','players','redraft','history','darts','mock','draftroom','rankings'][i] === name);
   });
   if (name === 'history'  && !document.querySelector('.history-card'))    loadTradeHistory();
   if (name === 'rankings' && !document.querySelector('.rankings-row:not(.header)')) loadLeagueRankings();
@@ -4862,6 +5148,75 @@ const SLEEPER_SF_ADP = {
   'andrei iosivas': {adp:316.0,fp:215,landmine:6.7,p:'WR'},
   'dameon pierce': {adp:301.0,fp:199,landmine:4.4,p:'RB'},
   'chris rodriguez': {adp:283.0,fp:193,landmine:0.0,p:'RB'},
+};
+
+// ── QB EPA per dropback (real, 2025 season, nfelo.com snapshot) ──────────
+// Point-in-time snapshot, not a live feed — will go stale as the season
+// progresses. starts<8 means the rate stat is unreliable (small sample).
+const QB_EPA_DB = {
+  'josh allen': {epaDb:0.23,starts:16,team:'BUF'},
+  'matthew stafford': {epaDb:0.23,starts:17,team:'LAR'},
+  'drake maye': {epaDb:0.31,starts:17,team:'NE'},
+  'joe burrow': {epaDb:0.13,starts:8,team:'CIN'},
+  'brock purdy': {epaDb:0.25,starts:9,team:'SF'},
+  'trevor lawrence': {epaDb:0.12,starts:17,team:'JAX'},
+  'dak prescott': {epaDb:0.19,starts:17,team:'DAL'},
+  'bo nix': {epaDb:0.09,starts:17,team:'DEN'},
+  'jared goff': {epaDb:0.18,starts:17,team:'DET'},
+  'patrick mahomes': {epaDb:0.18,starts:14,team:'KC'},
+  'jalen hurts': {epaDb:0.11,starts:16,team:'PHI'},
+  'jayden daniels': {epaDb:0.04,starts:6,team:'WAS'},
+  'kyler murray': {epaDb:0.11,starts:5,team:'ARI'},
+  'caleb williams': {epaDb:0.1,starts:17,team:'CHI'},
+  'jordan love': {epaDb:0.29,starts:15,team:'GB'},
+  'aaron rodgers': {epaDb:0.04,starts:16,team:'PIT'},
+  'lamar jackson': {epaDb:0.1,starts:13,team:'BAL'},
+  'russell wilson': {epaDb:-0.03,starts:3,team:'NYG'},
+  'mac jones': {epaDb:0.14,starts:8,team:'SF'},
+  'daniel jones': {epaDb:0.19,starts:13,team:'IND'},
+  'mitchell trubisky': {epaDb:0.69,starts:1,team:'BUF'},
+  'baker mayfield': {epaDb:0.09,starts:17,team:'TB'},
+  'jaxson dart': {epaDb:0.12,starts:12,team:'NYG'},
+  'cj stroud': {epaDb:0.15,starts:14,team:'HOU'},
+  'philip rivers': {epaDb:-0.06,starts:3,team:'IND'},
+  'justin herbert': {epaDb:0.08,starts:16,team:'LAC'},
+  'jameis winston': {epaDb:0.3,starts:2,team:'NYG'},
+  'kirk cousins': {epaDb:0.03,starts:8,team:'ATL'},
+  'jacoby brissett': {epaDb:0.01,starts:12,team:'ARI'},
+  'tyler shough': {epaDb:0.01,starts:9,team:'NO'},
+  'joe flacco': {epaDb:-0.07,starts:10,team:'CIN'},
+  'tyler huntley': {epaDb:0.17,starts:2,team:'BAL'},
+  'sam darnold': {epaDb:0.15,starts:17,team:'SEA'},
+  'marcus mariota': {epaDb:0.04,starts:9,team:'WAS'},
+  'bryce young': {epaDb:0.02,starts:16,team:'CAR'},
+  'justin fields': {epaDb:-0.04,starts:9,team:'NYJ'},
+  'malik willis': {epaDb:0.73,starts:1,team:'GB'},
+  'davis mills': {epaDb:-0.06,starts:3,team:'HOU'},
+  'mason rudolph': {epaDb:0.1,starts:1,team:'PIT'},
+  'tua tagovailoa': {epaDb:0.01,starts:14,team:'MIA'},
+  'michael penix': {epaDb:0.06,starts:9,team:'ATL'},
+  'trey lance': {epaDb:-0.48,starts:1,team:'LAC'},
+  'jake browning': {epaDb:-0.23,starts:3,team:'CIN'},
+  'gardner minshew': {epaDb:-0.42,starts:1,team:'KC'},
+  'andy dalton': {epaDb:-0.18,starts:1,team:'CAR'},
+  'tyrod taylor': {epaDb:-0.03,starts:4,team:'NYJ'},
+  'carson wentz': {epaDb:0.06,starts:5,team:'MIN'},
+  'cameron ward': {epaDb:-0.13,starts:17,team:'TEN'},
+  'cooper rush': {epaDb:-0.45,starts:2,team:'BAL'},
+  'spencer rattler': {epaDb:-0.05,starts:8,team:'NO'},
+  'riley leonard': {epaDb:-0.06,starts:1,team:'IND'},
+  'geno smith': {epaDb:-0.1,starts:15,team:'OAK'},
+  'jj mccarthy': {epaDb:-0.08,starts:10,team:'MIN'},
+  'tanner mckee': {epaDb:-0.03,starts:1,team:'PHI'},
+  'kenny pickett': {epaDb:-0.46,starts:2,team:'OAK'},
+  'josh johnson': {epaDb:0.34,starts:2,team:'WAS'},
+  'quinn ewers': {epaDb:-0.08,starts:3,team:'MIA'},
+  'dillon gabriel': {epaDb:-0.12,starts:6,team:'CLE'},
+  'chris oladokun': {epaDb:-0.48,starts:2,team:'KC'},
+  'shedeur sanders': {epaDb:-0.23,starts:7,team:'CLE'},
+  'clayton tune': {epaDb:-0.7,starts:1,team:'GB'},
+  'brady cook': {epaDb:-0.36,starts:4,team:'NYJ'},
+  'max brosmin': {epaDb:-0.55,starts:2,team:'MIN'},
 };
 
 const MS_DATA = {
@@ -6464,9 +6819,9 @@ function gradeColor(pct) {
 }
 
 // picks: array of {pos, adpDiff, tierGap?} for ONE drafted team.
-// League target profile is a reasonable 2QB Superflex 16-round baseline —
-// used only to flag obvious positional gaps, not a hard requirement.
-const SF_TARGET_PROFILE = { QB: 3, RB: 4, WR: 5, TE: 1 };
+// 14-team Superflex PPR: 1QB + 2RB + 3WR + 1TE + 1FLEX + 1SF + 1DST + 4 bench = 14 rounds
+// Targets over a full draft — used only to flag obvious positional gaps.
+const SF_TARGET_PROFILE = { QB: 2, RB: 3, WR: 5, TE: 1, DST: 1 };
 
 function buildTeamGradeCard(draftName, picks, threshold) {
   threshold = threshold || 6;
@@ -7862,239 +8217,15 @@ let redraftSortCol = 'ms';
 
 function showRedraftSection(s) {
   const rankingsBtn = document.getElementById('redraft-nav-rankings');
-  const tiersBtn    = document.getElementById('redraft-nav-tiers');
-  const mineBtn     = document.getElementById('redraft-nav-mine');
+  const mineBtn = document.getElementById('redraft-nav-mine');
   const rankingsSec = document.getElementById('redraft-rankings-section');
-  const tiersSec    = document.getElementById('redraft-tiers-section');
-  const mineSec     = document.getElementById('redraft-mine-section');
+  const mineSec = document.getElementById('redraft-mine-section');
   if (rankingsBtn) rankingsBtn.classList.toggle('active', s === 'rankings');
-  if (tiersBtn)    tiersBtn.classList.toggle('active', s === 'tiers');
-  if (mineBtn)     mineBtn.classList.toggle('active', s === 'mine');
+  if (mineBtn) mineBtn.classList.toggle('active', s === 'mine');
   if (rankingsSec) rankingsSec.style.display = s === 'rankings' ? 'block' : 'none';
-  if (tiersSec)    tiersSec.style.display    = s === 'tiers'    ? 'block' : 'none';
-  if (mineSec)     mineSec.style.display     = s === 'mine'     ? 'block' : 'none';
+  if (mineSec) mineSec.style.display = s === 'mine' ? 'block' : 'none';
   if (s === 'rankings') renderRedraftRankings();
-  else if (s === 'tiers') initFPTiersSection();
   else renderRedraftMyPicks();
-}
-
-// ── FP Tiers — synced via Google Apps Script Web App ─────────────────────────
-const FP_CACHE_KEY   = 'fp_webapp_cache_v1';
-const FP_CACHE_TTL   = 6 * 60 * 60 * 1000;
-const FP_WEBAPP_KEY  = 'fp_webapp_url';
-let fpLiveData = null;
-let fpTierPosFilter = 'ALL';
-
-function setFPStatus(msg, isError) {
-  const el = document.getElementById('fpApiStatus');
-  if (el) { el.textContent = msg; el.style.color = isError ? 'var(--lose)' : 'var(--muted)'; }
-}
-
-function saveFPWebAppUrl() {
-  const input = document.getElementById('fpWebAppUrl');
-  if (!input) return;
-  const val = input.value.trim();
-  if (val) localStorage.setItem(FP_WEBAPP_KEY, val);
-}
-
-function getFPCached() {
-  try {
-    const raw = localStorage.getItem(FP_CACHE_KEY);
-    if (!raw) return null;
-    const obj = JSON.parse(raw);
-    if (Date.now() - obj.timestamp > FP_CACHE_TTL) return null;
-    return obj.data;
-  } catch(e) { return null; }
-}
-
-function initFPTiersSection() {
-  // Pre-fill Web App URL input if saved
-  const savedUrl = localStorage.getItem(FP_WEBAPP_KEY) || '';
-  const input = document.getElementById('fpWebAppUrl');
-  if (input && savedUrl) input.value = savedUrl;
-
-  const cached = getFPCached();
-  if (cached) {
-    fpLiveData = cached;
-    try {
-      const ago = Math.round((Date.now() - JSON.parse(localStorage.getItem(FP_CACHE_KEY)).timestamp) / 60000);
-      const agoStr = ago < 2 ? 'just now' : ago < 60 ? ago + 'm ago' : Math.round(ago / 60) + 'h ago';
-      const count = (cached.players || []).length;
-      setFPStatus('Last synced ' + agoStr + ' · ' + count + ' players loaded' + (cached.updated ? ' · Sheet updated ' + cached.updated : ''));
-    } catch(e) {}
-    renderFPTiers();
-  } else if (savedUrl) {
-    setFPStatus('Web App URL saved — click Sync to load tiers.');
-    renderFPTiers();
-  } else {
-    setFPStatus('Paste your Web App URL above, then click Sync.');
-    renderFPTiers();
-  }
-}
-
-async function refreshFPTiers() {
-  const url = (localStorage.getItem(FP_WEBAPP_KEY) || '').trim();
-  if (!url) {
-    setFPStatus('Paste your Google Apps Script Web App URL in the box above first.', true);
-    return;
-  }
-  setFPStatus('Syncing from Google Sheet…');
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error);
-    if (!data.players || !data.players.length) throw new Error('No players — run Refresh FP Tiers in your Google Sheet first.');
-    fpLiveData = data;
-    localStorage.setItem(FP_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: data }));
-    const count = data.players.length;
-    setFPStatus('Synced just now · ' + count + ' players loaded' + (data.updated ? ' · Sheet updated ' + data.updated : ''));
-    renderFPTiers();
-  } catch(e) {
-    setFPStatus('Sync failed: ' + e.message, true);
-  }
-}
-
-function filterFPTiers(pos) {
-  fpTierPosFilter = pos;
-  document.querySelectorAll('#fp-tier-pos-filters .pos-filter-btn').forEach(function(btn) {
-    btn.classList.toggle('active', btn.textContent.trim() === pos || (pos === 'ALL' && btn.textContent.trim() === 'ALL'));
-  });
-  renderFPTiers();
-}
-
-// ADP → tier band (12-team league, rounds as tiers)
-function fpAdpTier(adp) {
-  var a = parseFloat(adp) || 999;
-  if (a <= 12)  return 1;
-  if (a <= 24)  return 2;
-  if (a <= 36)  return 3;
-  if (a <= 48)  return 4;
-  if (a <= 60)  return 5;
-  if (a <= 84)  return 6;
-  if (a <= 108) return 7;
-  if (a <= 144) return 8;
-  if (a <= 192) return 9;
-  return 10;
-}
-
-function renderFPTiers() {
-  var container = document.getElementById('fpTiersList');
-  if (!container) return;
-
-  var data = fpLiveData || getFPCached();
-  if (!data) {
-    container.innerHTML = '<div class="empty-state" style="padding:30px;">Paste your Web App URL above and click Sync.</div>';
-    return;
-  }
-
-  var players = (data.players || []).slice();
-  var posFilter = fpTierPosFilter || 'ALL';
-  var searchQ = (document.getElementById('fpTierSearch') ? document.getElementById('fpTierSearch').value : '').toLowerCase();
-
-  // Detect which format the data is in (new: has .name/.adp, old: has .player_name/.rank_ecr)
-  var isNewFormat = players.length > 0 && players[0].name !== undefined;
-
-  var filtered = players.filter(function(p) {
-    var pos    = isNewFormat ? (p.pos || '') : (p.player_position_id || '');
-    var name   = isNewFormat ? (p.name || '') : (p.player_name || '');
-    if (posFilter !== 'ALL' && pos !== posFilter) return false;
-    if (searchQ.length > 1 && !name.toLowerCase().includes(searchQ)) return false;
-    return true;
-  });
-
-  if (!filtered.length) {
-    container.innerHTML = '<div class="empty-state" style="padding:30px;">No players found.</div>';
-    return;
-  }
-
-  // Assign display tier
-  filtered.forEach(function(p) {
-    if (isNewFormat) {
-      p._tier = p.fp_tier ? parseInt(p.fp_tier) : fpAdpTier(p.adp);
-    } else {
-      p._tier = parseInt(p.tier) || fpAdpTier(p.rank_ecr) || 10;
-    }
-  });
-
-  // Sort by tier, then ADP/ECR
-  filtered.sort(function(a, b) {
-    if (a._tier !== b._tier) return a._tier - b._tier;
-    var aAdp = isNewFormat ? (parseFloat(a.adp) || 999) : (a.rank_ecr || 999);
-    var bAdp = isNewFormat ? (parseFloat(b.adp) || 999) : (b.rank_ecr || 999);
-    return aAdp - bAdp;
-  });
-
-  // Group by tier
-  var tierMap = {};
-  filtered.forEach(function(p) {
-    var t = p._tier;
-    if (!tierMap[t]) tierMap[t] = [];
-    tierMap[t].push(p);
-  });
-
-  var tierColors = ['#e03131','#e8590c','#f08c00','#2f9e44','#1971c2','#7048e8','#868e96','#868e96','#868e96','#868e96'];
-  var tierNums = Object.keys(tierMap).map(Number).sort(function(a,b){return a-b;});
-  var rows = [];
-
-  var SIGNAL_STYLES = {
-    'TARGET': 'background:#2f9e44;color:#fff;',
-    'AVOID':  'background:#c92a2a;color:#fff;',
-    'DART':   'background:#e67700;color:#fff;',
-  };
-
-  tierNums.forEach(function(t) {
-    var color = tierColors[Math.min(t - 1, tierColors.length - 1)];
-    var label = t <= 9 ? 'Tier ' + t : 'Late Round';
-    rows.push(
-      '<div class="qb-tier-label" style="color:' + color + ';border-left:3px solid ' + color + ';padding-left:10px;">' +
-        '<span>' + label + '</span>' +
-        '<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px;">' + tierMap[t].length + ' players</span>' +
-      '</div>'
-    );
-    tierMap[t].forEach(function(p) {
-      var pos, name, adpVal, msVal, signalRaw, fpTierBadge;
-      if (isNewFormat) {
-        pos        = p.pos || '';
-        name       = p.name || '';
-        adpVal     = p.adp ? parseFloat(p.adp).toFixed(1) : '—';
-        msVal      = p.ms  || '';
-        signalRaw  = String(p.signal || '');
-        fpTierBadge= p.fp_tier ? ('<span style="font-family:\'DM Mono\',monospace;font-size:9px;color:' + color + ';font-weight:700;min-width:18px;text-align:center;background:rgba(255,255,255,0.05);border-radius:3px;padding:1px 4px;" title="FP Tier">T' + p.fp_tier + '</span>') : '';
-      } else {
-        pos        = p.player_position_id || '';
-        name       = p.player_name || '';
-        adpVal     = p.rank_ecr || '—';
-        msVal      = '';
-        signalRaw  = '';
-        fpTierBadge= '';
-      }
-
-      var posLower = pos.toLowerCase();
-      var msNum    = parseInt(msVal) || 0;
-      var msColor  = msNum >= 90 ? 'var(--win)' : msNum >= 70 ? 'var(--accent3)' : msNum >= 50 ? 'var(--muted)' : 'var(--lose)';
-      var msDisplay= msNum ? '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:' + msColor + ';font-weight:700;min-width:36px;text-align:right;" title="Market Score">MS' + msNum + '</span>' : '';
-
-      // Signal badge
-      var sigDisplay = '';
-      if (signalRaw.includes('TARGET')) sigDisplay = '<span style="font-size:8px;font-weight:700;padding:2px 5px;border-radius:3px;' + SIGNAL_STYLES.TARGET + '">▲</span>';
-      else if (signalRaw.includes('AVOID')) sigDisplay = '<span style="font-size:8px;font-weight:700;padding:2px 5px;border-radius:3px;' + SIGNAL_STYLES.AVOID + '">▼</span>';
-      else if (signalRaw.includes('DART') || signalRaw.includes('🎯')) sigDisplay = '<span style="font-size:8px;font-weight:700;padding:2px 5px;border-radius:3px;' + SIGNAL_STYLES.DART + '">🎯</span>';
-
-      rows.push(
-        '<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);">' +
-          '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);min-width:30px;text-align:right;">' + adpVal + '</span>' +
-          '<span class="asset-pos pos-' + posLower + '" style="font-size:9px;">' + pos + '</span>' +
-          '<span style="flex:1;font-size:13px;font-weight:600;">' + name + '</span>' +
-          sigDisplay +
-          fpTierBadge +
-          msDisplay +
-        '</div>'
-      );
-    });
-  });
-
-  container.innerHTML = rows.join('');
 }
 
 function filterRedraft(pos) {
@@ -8151,12 +8282,63 @@ function redraftBandFor(adp) {
 // your actual Superflex drafts he goes in round 1. Once REAL mock ADP exists
 // for a player, it already reflects true Superflex behavior and needs no
 // adjustment — this only touches the fallback.
+// FP_SUPERFLEX_ECR is keyed lastname_team_pos (e.g. 'willis_mia_qb'), NOT
+// the plain "firstname lastname" key used by MS_DATA/SLEEPER_SF_ADP — a
+// direct FP_SUPERFLEX_ECR[key] lookup can never match anything. Build a
+// lastname+pos index once so it actually gets used.
+let fpSfByLastPosCache = null;
+function getFpSfByLastPos(plainKey, pos) {
+  if (!fpSfByLastPosCache) {
+    fpSfByLastPosCache = {};
+    Object.keys(FP_SUPERFLEX_ECR).forEach(function(k) {
+      const parts = k.split('_');
+      if (parts.length < 3) return;
+      const posPart = parts[parts.length - 1];
+      const last = parts.slice(0, parts.length - 2).join('_');
+      fpSfByLastPosCache[last + '|' + posPart] = FP_SUPERFLEX_ECR[k];
+    });
+  }
+  const lastName = plainKey.trim().split(' ').pop();
+  return fpSfByLastPosCache[lastName + '|' + (pos || '').toLowerCase()] || null;
+}
+
+function getRedraft1QBBoard() {
+  // Primary source: MS_DATA 1QB ADP values
+  const msPlayers = {};
+  Object.entries(MS_DATA).forEach(function([key, d]) {
+    if (d.adp != null) {
+      msPlayers[key] = {
+        key: key,
+        name: redraftDisplayName(key),
+        pos: d.p,
+        adp: d.adp,
+        source: '1qb_adp'
+      };
+    }
+  });
+
+  // Fill in from LRFG_TIERS for players not in MS_DATA (uses overall rank as ADP proxy)
+  Object.entries(LRFG_TIERS).forEach(function([key, d]) {
+    if (!msPlayers[key]) {
+      msPlayers[key] = {
+        key: key,
+        name: redraftDisplayName(key),
+        pos: d.p,
+        adp: d.o,   // LRDG 1QB overall rank as ADP proxy
+        source: '1qb_lrdg'
+      };
+    }
+  });
+
+  return Object.values(msPlayers);
+}
+
 function getRedraftBoard() {
   if (!redraftAdpCache) buildRedraftAdpCache();
   return Object.entries(MS_DATA).map(function([key, d]) {
     const real = redraftAdpCache[key];              // your own saved redraft mocks — best available
     const sfReal = SLEEPER_SF_ADP[key] || null;      // real published Superflex ADP (224 players) — second best
-    const fpSf = FP_SUPERFLEX_ECR[key] || null;      // FantasyPros Superflex ECR (534 players) — deeper coverage fallback
+    const fpSf = getFpSfByLastPos(key, d.p);         // FantasyPros Superflex ECR (534 players) — deeper coverage fallback
 
     let adp, source, landmine;
     if (real) {
