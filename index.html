@@ -1526,6 +1526,14 @@
 
   <div id="statusMsg" class="status"></div>
 
+  <!-- Always-visible LIVE shortcut (before league loads) -->
+  <div id="liveQuickBar" style="display:flex;gap:8px;margin-bottom:4px;">
+    <button class="tab-btn" onclick="showTab('live');document.getElementById('tabNav').style.display='flex';" style="background:rgba(0,229,160,0.12);border:1px solid var(--accent);color:var(--accent);font-weight:700;border-radius:8px;padding:8px 16px;font-size:12px;">🔴 LIVE DRAFT</button>
+    <button class="tab-btn" onclick="showTab('darts');document.getElementById('tabNav').style.display='flex';" style="border-radius:8px;padding:8px 16px;font-size:12px;">🎯 DARTS</button>
+    <button class="tab-btn" onclick="showTab('redraft');document.getElementById('tabNav').style.display='flex';" style="border-radius:8px;padding:8px 16px;font-size:12px;">📋 REDRAFT</button>
+    <button class="tab-btn" onclick="showTab('mock');document.getElementById('tabNav').style.display='flex';" style="border-radius:8px;padding:8px 16px;font-size:12px;">📊 MOCK</button>
+  </div>
+
   <!-- Tab Navigation -->
   <div class="tab-nav" id="tabNav" style="display:none;">
     <button class="tab-btn active" onclick="showTab('trade')">🔄 TRADE</button>
