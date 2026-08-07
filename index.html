@@ -3060,14 +3060,19 @@ async function loadLeagues() {
 
     if (!userId) throw new Error('No user_id returned from Sleeper');
 
-    // Fetch 2026 leagues (current season)
-    const lRes = await fetch(`https://api.sleeper.app/v1/user/${userId}/leagues/nfl/2026`);
-    console.log('2026 leagues status:', lRes.status);
-    if (!lRes.ok) throw new Error('Could not fetch leagues');
-    leagues = await lRes.json();
-    console.log('Leagues found:', leagues?.length);
+    // Fetch leagues — try 2026 first, fall back to 2025
+    let leagueYear = '2026';
+    let lRes = await fetch(`https://api.sleeper.app/v1/user/${userId}/leagues/nfl/2026`);
+    leagues = lRes.ok ? await lRes.json() : [];
+    if (!Array.isArray(leagues) || !leagues.length) {
+      leagueYear = '2025';
+      lRes = await fetch(`https://api.sleeper.app/v1/user/${userId}/leagues/nfl/2025`);
+      if (!lRes.ok) throw new Error('Could not fetch leagues');
+      leagues = await lRes.json();
+    }
+    console.log(`Leagues found (${leagueYear}):`, leagues?.length);
 
-    if (!Array.isArray(leagues) || !leagues.length) throw new Error('No 2026 leagues found for this user');
+    if (!Array.isArray(leagues) || !leagues.length) throw new Error('No leagues found for this user on Sleeper (tried 2025 & 2026)');
 
     const sel = document.getElementById('leagueSelect');
     sel.innerHTML = '<option value="">— select league —</option>';
