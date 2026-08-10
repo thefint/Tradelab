@@ -5907,6 +5907,12 @@ async function autoSyncFromGist() {
   }
 }
 
+function onMockFormatSelectChange() {
+  const formatEl = document.getElementById('mockTabFormatSelect');
+  const qbModeRow = document.getElementById('mockTabQbModeRow');
+  if (qbModeRow) qbModeRow.style.display = (formatEl && formatEl.value === 'redraft') ? 'block' : 'none';
+}
+
 function addMockDraftFromTab() {
   return addMockDraft();
 }
