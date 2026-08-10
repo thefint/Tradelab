@@ -2098,16 +2098,10 @@
 <!-- TAB: DRAFT ROOM -->
 <div id="tab-draftroom" style="display:none;">
   <div class="tab-section-header"><span>Draft Room</span></div>
-  <!-- Focus mode slider (synced with Mock tab) -->
-  <div style="display:flex;align-items:center;gap:0;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:3px;position:relative;">
-    <div id="drFocusSliderThumb" style="position:absolute;top:3px;bottom:3px;left:50%;width:calc(50% - 3px);background:var(--accent);border-radius:6px;transition:left 0.2s ease;z-index:0;"></div>
-    <button id="drFocusBtnDynasty" onclick="setMockFocusMode('dynasty')" style="flex:1;position:relative;z-index:1;background:none;border:none;padding:8px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;cursor:pointer;color:var(--muted);">👑 DYNASTY</button>
-    <button id="drFocusBtnRedraft" onclick="setMockFocusMode('redraft')" style="flex:1;position:relative;z-index:1;background:none;border:none;padding:8px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;cursor:pointer;color:#000;font-weight:700;">🎯 REDRAFT</button>
-  </div>
   <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;align-items:center;">
     <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">SLOT</span>
     <select id="dr-slot" onchange="renderDraftRoom()" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:3px 7px;font-family:'DM Mono',monospace;">
-      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option>
+      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
     </select>
     <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">TEAMS</span>
     <select id="dr-teams" onchange="renderDraftRoom()" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:3px 7px;font-family:'DM Mono',monospace;">
@@ -6323,27 +6317,13 @@ let mockPos = 'ALL';
 
 function setMockFocusMode(mode) {
   mockFocusMode = mode;
-  const left = mode === 'dynasty' ? '3px' : '50%';
-  const dynColor = mode === 'dynasty' ? '#000' : 'var(--muted)';
-  const rdrColor = mode === 'redraft' ? '#000' : 'var(--muted)';
-  const dynWeight = mode === 'dynasty' ? '700' : '400';
-  const rdrWeight = mode === 'redraft' ? '700' : '400';
-  // Sync Mock tab slider
   const thumb = document.getElementById('mockFocusSliderThumb');
   const dynBtn = document.getElementById('mockFocusBtnDynasty');
   const rdrBtn = document.getElementById('mockFocusBtnRedraft');
-  if (thumb) thumb.style.left = left;
-  if (dynBtn) { dynBtn.style.color = dynColor; dynBtn.style.fontWeight = dynWeight; }
-  if (rdrBtn) { rdrBtn.style.color = rdrColor; rdrBtn.style.fontWeight = rdrWeight; }
-  // Sync Draft Room slider
-  const drThumb = document.getElementById('drFocusSliderThumb');
-  const drDynBtn = document.getElementById('drFocusBtnDynasty');
-  const drRdrBtn = document.getElementById('drFocusBtnRedraft');
-  if (drThumb) drThumb.style.left = left;
-  if (drDynBtn) { drDynBtn.style.color = dynColor; drDynBtn.style.fontWeight = dynWeight; }
-  if (drRdrBtn) { drRdrBtn.style.color = rdrColor; drRdrBtn.style.fontWeight = rdrWeight; }
+  if (thumb) thumb.style.left = mode === 'dynasty' ? '3px' : '50%';
+  if (dynBtn) { dynBtn.style.color = mode === 'dynasty' ? '#000' : 'var(--muted)'; dynBtn.style.fontWeight = mode === 'dynasty' ? '700' : '400'; }
+  if (rdrBtn) { rdrBtn.style.color = mode === 'redraft' ? '#000' : 'var(--muted)'; rdrBtn.style.fontWeight = mode === 'redraft' ? '700' : '400'; }
   renderMockTab();
-  if (document.getElementById('tab-draftroom') && document.getElementById('tab-draftroom').style.display !== 'none') renderDraftRoom();
 }
 
 function showMockSection(s) {
@@ -7189,13 +7169,7 @@ const DR_POS_COLORS = {
 const SUPERFLEX_QB_MULT = { elite: 0.32, starter: 0.45, streamer: 0.65, deep: 0.85 };
 
 function getDRPlayers() {
-  const isRedraft = mockFocusMode === 'redraft';
-  if (isRedraft) {
-    if (!redraftAdpCache) buildRedraftAdpCache();
-  } else {
-    if (!mockAdpCache) buildMockAdpCache();
-  }
-  const activeCache = isRedraft ? redraftAdpCache : mockAdpCache;
+  if (!mockAdpCache) buildMockAdpCache();
 
   const players = Object.entries(LRFG_TIERS)
     .map(function([key, d]) {
@@ -7217,14 +7191,15 @@ function getDRPlayers() {
     });
 
   players.forEach(function(p) {
-    const mock = (activeCache && (activeCache[p.key] || activeCache[p.name.toLowerCase().replace(/[^a-z ]/g,'')])) || null;
+    const mock = mockAdpCache[p.key] || mockAdpCache[p.name.toLowerCase().replace(/[^a-z ]/g,'')] || null;
     if (mock) {
-      // Real observed ADP from saved mocks — reflects actual league behavior.
+      // Real observed ADP from your own league's mocks — already reflects
+      // Superflex QB scarcity naturally, no heuristic multiplier needed.
       p.mockAdp = mock.avg;
       p.mockCount = mock.count;
       p.sfScore = mock.avg;
       p.hasRealAdp = true;
-    } else if (!isRedraft && p.pos === 'QB') {
+    } else if (p.pos === 'QB') {
       let mult;
       if (p.posRank <= 6)       mult = SUPERFLEX_QB_MULT.elite;    // QB1 tier — target rounds 1-3
       else if (p.posRank <= 12) mult = SUPERFLEX_QB_MULT.starter;  // solid QB2 starters — rounds 3-6
