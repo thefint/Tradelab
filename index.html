@@ -6268,6 +6268,8 @@ async function addMockDraft() {
   const formatEl1 = document.getElementById('mockTabFormatSelect');
   const formatEl2 = document.getElementById('mockFormatSelect');
   const format = (formatEl1 && formatEl1.value) || (formatEl2 && formatEl2.value) || 'dynasty';
+  const qbModeEl = document.getElementById('mockTabQbModeSelect');
+  const qbMode = (format === 'redraft' && qbModeEl) ? (qbModeEl.value || 'superflex') : 'superflex';
 
   const addBtns = document.querySelectorAll('[onclick="addMockDraft()"], [onclick="addMockDraftFromTab()"]');
   addBtns.forEach(function(b){b.textContent='...';b.disabled=true;});
