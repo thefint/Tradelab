@@ -7189,7 +7189,13 @@ const DR_POS_COLORS = {
 const SUPERFLEX_QB_MULT = { elite: 0.32, starter: 0.45, streamer: 0.65, deep: 0.85 };
 
 function getDRPlayers() {
-  if (!mockAdpCache) buildMockAdpCache();
+  const isRedraft = mockFocusMode === 'redraft';
+  if (isRedraft) {
+    if (!redraftAdpCache) buildRedraftAdpCache();
+  } else {
+    if (!mockAdpCache) buildMockAdpCache();
+  }
+  const activeCache = isRedraft ? redraftAdpCache : mockAdpCache;
 
   const players = Object.entries(LRFG_TIERS)
     .map(function([key, d]) {
@@ -7211,20 +7217,18 @@ function getDRPlayers() {
     });
 
   players.forEach(function(p) {
-    const mock = mockAdpCache[p.key] || mockAdpCache[p.name.toLowerCase().replace(/[^a-z ]/g,'')] || null;
+    const mock = (activeCache && (activeCache[p.key] || activeCache[p.name.toLowerCase().replace(/[^a-z ]/g,'')])) || null;
     if (mock) {
-      // Real observed ADP from your own league's mocks — already reflects
-      // Superflex QB scarcity naturally, no heuristic multiplier needed.
       p.mockAdp = mock.avg;
       p.mockCount = mock.count;
       p.sfScore = mock.avg;
       p.hasRealAdp = true;
-    } else if (p.pos === 'QB') {
+    } else if (!isRedraft && p.pos === 'QB') {
       let mult;
-      if (p.posRank <= 6)       mult = SUPERFLEX_QB_MULT.elite;    // QB1 tier — target rounds 1-3
-      else if (p.posRank <= 12) mult = SUPERFLEX_QB_MULT.starter;  // solid QB2 starters — rounds 3-6
-      else if (p.posRank <= 20) mult = SUPERFLEX_QB_MULT.streamer; // streamer/backup tier
-      else                        mult = SUPERFLEX_QB_MULT.deep;   // deep — small bump only
+      if (p.posRank <= 6)       mult = SUPERFLEX_QB_MULT.elite;
+      else if (p.posRank <= 12) mult = SUPERFLEX_QB_MULT.starter;
+      else if (p.posRank <= 20) mult = SUPERFLEX_QB_MULT.streamer;
+      else                        mult = SUPERFLEX_QB_MULT.deep;
       p.sfScore = p.overall * mult;
       p.hasRealAdp = false;
     } else {
