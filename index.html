@@ -1841,16 +1841,19 @@
       </div>
     </div>
 
-    <div style="margin-bottom:8px;">
-      <input id="mockTabDraftInput" type="text" placeholder="Paste Sleeper draft ID or URL…" style="width:100%;box-sizing:border-box;background:var(--surface);border:2px solid var(--accent);border-radius:999px;padding:16px 24px;color:var(--text);font-size:15px;">
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:6px;">
-      <select id="mockTabFormatSelect" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:12px;">
-        <option value="redraft" selected>Redraft</option>
-        <option value="dynasty">Dynasty</option>
+    <input id="mockTabDraftInput" type="text" placeholder="Paste Sleeper draft ID or URL…" style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;color:var(--text);font-size:16px;margin-bottom:8px;">
+    <select id="mockTabFormatSelect" onchange="onMockFormatSelectChange()" style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;color:var(--text);font-size:16px;margin-bottom:8px;">
+      <option value="redraft" selected>Redraft</option>
+      <option value="dynasty">Dynasty</option>
+    </select>
+    <div id="mockTabQbModeRow" style="margin-bottom:8px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:5px;letter-spacing:1px;">REDRAFT FORMAT</div>
+      <select id="mockTabQbModeSelect" style="width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;color:var(--text);font-size:16px;">
+        <option value="superflex" selected>Superflex (2QB)</option>
+        <option value="1qb">Standard (1QB)</option>
       </select>
-      <button class="btn btn-primary" onclick="addMockDraftFromTab()" style="font-size:12px;padding:10px 20px;border-radius:8px;white-space:nowrap;">+ Add</button>
     </div>
+    <button class="btn btn-primary" onclick="addMockDraftFromTab()" style="width:100%;box-sizing:border-box;font-size:15px;font-weight:700;padding:14px;border-radius:8px;margin-bottom:8px;">+ Add Draft</button>
     <label style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;">
       <input type="checkbox" id="mockTabPracticeToggle" style="accent-color:var(--accent);">
       I drafted this one myself (practice) — exclude from ADP
