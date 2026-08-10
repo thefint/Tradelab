@@ -2098,10 +2098,16 @@
 <!-- TAB: DRAFT ROOM -->
 <div id="tab-draftroom" style="display:none;">
   <div class="tab-section-header"><span>Draft Room</span></div>
+  <!-- Focus mode slider (synced with Mock tab) -->
+  <div style="display:flex;align-items:center;gap:0;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:3px;position:relative;">
+    <div id="drFocusSliderThumb" style="position:absolute;top:3px;bottom:3px;left:50%;width:calc(50% - 3px);background:var(--accent);border-radius:6px;transition:left 0.2s ease;z-index:0;"></div>
+    <button id="drFocusBtnDynasty" onclick="setMockFocusMode('dynasty')" style="flex:1;position:relative;z-index:1;background:none;border:none;padding:8px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;cursor:pointer;color:var(--muted);">👑 DYNASTY</button>
+    <button id="drFocusBtnRedraft" onclick="setMockFocusMode('redraft')" style="flex:1;position:relative;z-index:1;background:none;border:none;padding:8px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;cursor:pointer;color:#000;font-weight:700;">🎯 REDRAFT</button>
+  </div>
   <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;align-items:center;">
     <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">SLOT</span>
     <select id="dr-slot" onchange="renderDraftRoom()" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:3px 7px;font-family:'DM Mono',monospace;">
-      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
+      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option>
     </select>
     <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">TEAMS</span>
     <select id="dr-teams" onchange="renderDraftRoom()" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:3px 7px;font-family:'DM Mono',monospace;">
