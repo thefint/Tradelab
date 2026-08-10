@@ -6052,31 +6052,31 @@ function buildMockAdpCache() {
 // mock's pick order reflects single-season value, not Superflex dynasty
 // capital, and blending the two would corrupt both.
 let redraftAdpCache = null;
+let redraftAdpCache1QB = null;
 function buildRedraftAdpCache() {
   const drafts = getMockDrafts();
-  const cache = {};
+  const cacheSF = {}, cache1QB = {};
   for (const draft of drafts) {
     if (draft.excludeFromAdp) continue;
     if ((draft.format || 'dynasty') !== 'redraft') continue;
+    const cache = (draft.qbMode || 'superflex') === '1qb' ? cache1QB : cacheSF;
     for (const pick of (draft.picks || [])) {
       const key = pick.name.toLowerCase().replace(/[^a-z ]/g,'');
       if (!cache[key]) cache[key] = { picks: [], name: pick.name };
       cache[key].picks.push(pick.overall);
     }
   }
-  const result = {};
-  for (const [key, data] of Object.entries(cache)) {
-    const sorted = [...data.picks].sort((a,b) => a-b);
-    result[key] = {
-      avg:   Math.round(data.picks.reduce((s,v) => s+v, 0) / data.picks.length * 10) / 10,
-      best:  sorted[0],
-      worst: sorted[sorted.length-1],
-      count: data.picks.length,
-      name:  data.name,
-    };
+  function finalize(c) {
+    const r = {};
+    for (const [key, data] of Object.entries(c)) {
+      const sorted = [...data.picks].sort((a,b) => a-b);
+      r[key] = { avg: Math.round(data.picks.reduce((s,v)=>s+v,0)/data.picks.length*10)/10, best: sorted[0], worst: sorted[sorted.length-1], count: data.picks.length, name: data.name };
+    }
+    return r;
   }
-  redraftAdpCache = result;
-  return result;
+  redraftAdpCache = finalize(cacheSF);
+  redraftAdpCache1QB = finalize(cache1QB);
+  return redraftAdpCache;
 }
 
 function getMockAdp(playerName) {
