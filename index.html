@@ -6287,6 +6287,7 @@ async function addMockDraft() {
     if (!draft.picks.length) throw new Error('Draft has no picks yet');
     draft.excludeFromAdp = !!isPractice;
     draft.format = format;
+    draft.qbMode = qbMode;
     if (isPractice) {
       const slotStr = prompt('Which draft slot number were you? (1-' + (draft.teams || 12) + ')');
       const slot = parseInt(slotStr);
