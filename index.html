@@ -2097,7 +2097,14 @@
 
 <!-- TAB: DRAFT ROOM -->
 <div id="tab-draftroom" style="display:none;">
-  <div class="tab-section-header"><span>Draft Room</span></div>
+  <div class="tab-section-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Draft Room</span>
+    <div id="drFocusSlider" style="position:relative;width:110px;height:26px;background:var(--surface2);border-radius:20px;cursor:pointer;border:1px solid var(--border);flex-shrink:0;" onclick="setMockFocusMode(mockFocusMode==='dynasty'?'redraft':'dynasty')">
+      <div id="drFocusSliderThumb" style="position:absolute;top:3px;left:3px;width:50px;height:18px;background:var(--text);border-radius:14px;transition:left 0.2s;"></div>
+      <span id="drFocusBtnDynasty" style="position:absolute;left:8px;top:5px;font-size:9px;font-family:'DM Mono',monospace;font-weight:700;color:#000;z-index:1;pointer-events:none;">DYN</span>
+      <span id="drFocusBtnRedraft" style="position:absolute;right:6px;top:5px;font-size:9px;font-family:'DM Mono',monospace;font-weight:400;color:var(--muted);z-index:1;pointer-events:none;">RDR</span>
+    </div>
+  </div>
   <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;align-items:center;">
     <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">SLOT</span>
     <select id="dr-slot" onchange="renderDraftRoom()" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:3px 7px;font-family:'DM Mono',monospace;">
