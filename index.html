@@ -6324,13 +6324,26 @@ let mockPos = 'ALL';
 
 function setMockFocusMode(mode) {
   mockFocusMode = mode;
+  const left = mode === 'dynasty' ? '3px' : '50%';
+  const dynColor = mode === 'dynasty' ? '#000' : 'var(--muted)';
+  const rdrColor = mode === 'redraft' ? '#000' : 'var(--muted)';
+  const dynWeight = mode === 'dynasty' ? '700' : '400';
+  const rdrWeight = mode === 'redraft' ? '700' : '400';
   const thumb = document.getElementById('mockFocusSliderThumb');
   const dynBtn = document.getElementById('mockFocusBtnDynasty');
   const rdrBtn = document.getElementById('mockFocusBtnRedraft');
-  if (thumb) thumb.style.left = mode === 'dynasty' ? '3px' : '50%';
-  if (dynBtn) { dynBtn.style.color = mode === 'dynasty' ? '#000' : 'var(--muted)'; dynBtn.style.fontWeight = mode === 'dynasty' ? '700' : '400'; }
-  if (rdrBtn) { rdrBtn.style.color = mode === 'redraft' ? '#000' : 'var(--muted)'; rdrBtn.style.fontWeight = mode === 'redraft' ? '700' : '400'; }
+  if (thumb) thumb.style.left = left;
+  if (dynBtn) { dynBtn.style.color = dynColor; dynBtn.style.fontWeight = dynWeight; }
+  if (rdrBtn) { rdrBtn.style.color = rdrColor; rdrBtn.style.fontWeight = rdrWeight; }
+  const drThumb = document.getElementById('drFocusSliderThumb');
+  const drDynBtn = document.getElementById('drFocusBtnDynasty');
+  const drRdrBtn = document.getElementById('drFocusBtnRedraft');
+  if (drThumb) drThumb.style.left = left;
+  if (drDynBtn) { drDynBtn.style.color = dynColor; drDynBtn.style.fontWeight = dynWeight; }
+  if (drRdrBtn) { drRdrBtn.style.color = rdrColor; drRdrBtn.style.fontWeight = rdrWeight; }
   renderMockTab();
+  const drTab = document.getElementById('tab-draftroom');
+  if (drTab && drTab.style.display !== 'none') renderDraftRoom();
 }
 
 function showMockSection(s) {
