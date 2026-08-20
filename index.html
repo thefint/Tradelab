@@ -4584,12 +4584,12 @@ function renderBalanceSuggestion() {
 
 // ── Tab Navigation ────────────────────────────────────────────────────────
 function showTab(name) {
-  ['trade','live','buysell','sos','players','redraft','history','darts','mock','draftroom','rankings'].forEach(t => {
+  ['trade','live','buysell','sos','players','redraft','history','darts','mock','draftroom','rankings','coaches'].forEach(t => {
     const el = document.getElementById(`tab-${t}`);
     if (el) el.style.display = t === name ? 'block' : 'none';
   });
   document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', ['trade','live','buysell','sos','players','redraft','history','darts','mock','draftroom','rankings'][i] === name);
+    btn.classList.toggle('active', ['trade','live','buysell','sos','players','redraft','history','darts','mock','draftroom','rankings','coaches'][i] === name);
   });
   if (name === 'history'  && !document.querySelector('.history-card'))    loadTradeHistory();
   if (name === 'rankings' && !document.querySelector('.rankings-row:not(.header)')) loadLeagueRankings();
@@ -4598,6 +4598,7 @@ function showTab(name) {
   if (name === 'darts') renderDarts('all');
   if (name === 'draftroom') renderDraftRoom();
   if (name === 'redraft') showRedraftSection('rankings');
+  if (name === 'coaches') renderCoachesTab();
   if (name === 'mock') {
     renderMockTab();
     // Show token status
