@@ -7942,6 +7942,160 @@ async function runRankingsAI(teams) {
 
   document.getElementById('rankingsAI').textContent = lines.join('\n\n');
 }
+// ── Coach View ────────────────────────────────────────────────────────────────
+
+async function loadAllLeagueData() {
+  if (!leagues.length) return false;
+  await Promise.all(leagues.map(async function(l) {
+    if (allLeagueData[l.league_id]) return;
+    try {
+      const [rRes, uRes, pRes] = await Promise.all([
+        fetch('https://api.sleeper.app/v1/league/' + l.league_id + '/rosters'),
+        fetch('https://api.sleeper.app/v1/league/' + l.league_id + '/users'),
+        fetch('https://api.sleeper.app/v1/league/' + l.league_id + '/traded_picks'),
+      ]);
+      const rosters = await rRes.json();
+      const usersArr = await uRes.json();
+      const tradedPks = await pRes.json();
+      const users = {};
+      usersArr.forEach(function(u) { users[u.user_id] = u.display_name || u.username || 'Unknown'; });
+
+      // Build pick ownership (mirrors main load logic)
+      const futureSeasons = [2027, 2028];
+      const rounds = [1, 2, 3, 4];
+      const picksByRoster = {};
+      rosters.forEach(function(r) { picksByRoster[r.roster_id] = []; });
+      const tradedSet = new Set();
+      tradedPks.forEach(function(pick) {
+        const yr = parseInt(pick.season);
+        if (!futureSeasons.includes(yr)) return;
+        tradedSet.add(yr + '_' + pick.round + '_' + pick.roster_id);
+        if (picksByRoster[pick.owner_id]) {
+          picksByRoster[pick.owner_id].push({ season: yr, round: pick.round, own: false, from: pick.roster_id });
+        }
+      });
+      rosters.forEach(function(r) {
+        futureSeasons.forEach(function(yr) {
+          rounds.forEach(function(round) {
+            if (!tradedSet.has(yr + '_' + round + '_' + r.roster_id)) {
+              picksByRoster[r.roster_id].push({ season: yr, round: round, own: true });
+            }
+          });
+        });
+      });
+
+      allLeagueData[l.league_id] = { rosters: rosters, users: users, picksByRoster: picksByRoster, name: l.name };
+    } catch(e) { console.warn('Coach View: failed to load league', l.league_id, e); }
+  }));
+  return true;
+}
+
+async function renderCoachesTab() {
+  const el = document.getElementById('coachesContent');
+  if (!leagues.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:40px;">Load your league first, then come back here.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="padding:20px;color:var(--muted);font-family:\'DM Mono\',monospace;font-size:11px;">Loading all league rosters…</div>';
+  await loadAllLeagueData();
+
+  // Build unified manager list
+  const managers = {};
+  Object.values(allLeagueData).forEach(function(ld) {
+    Object.entries(ld.users).forEach(function(entry) { managers[entry[0]] = entry[1]; });
+  });
+  const sorted = Object.entries(managers).sort(function(a, b) { return a[1].localeCompare(b[1]); });
+
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">' +
+    '<span style="font-family:\'DM Mono\',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">MANAGER</span>' +
+    '<select id="coachSelect" onchange="renderCoachDetail(this.value)" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:13px;padding:6px 10px;font-family:\'DM Mono\',monospace;">' +
+    '<option value="">— select manager —</option>' +
+    sorted.map(function(e) { return '<option value="' + e[0] + '">' + e[1] + '</option>'; }).join('') +
+    '</select></div>' +
+    '<div id="coachDetail"></div>';
+
+  if (coachViewOwner && managers[coachViewOwner]) {
+    document.getElementById('coachSelect').value = coachViewOwner;
+    renderCoachDetail(coachViewOwner);
+  }
+}
+
+function renderCoachDetail(ownerId) {
+  coachViewOwner = ownerId;
+  const el = document.getElementById('coachDetail');
+  if (!ownerId || !el) return;
+
+  const POS_ORDER = ['QB','RB','WR','TE','K','DEF'];
+  const POS_COLOR = { QB:'#ef4444', RB:'#22c55e', WR:'#3b82f6', TE:'#a855f7', K:'#f59e0b', DEF:'#64748b' };
+
+  let html = '';
+  Object.entries(allLeagueData).forEach(function(entry) {
+    const lid = entry[0]; const ld = entry[1];
+    const roster = ld.rosters.find(function(r) { return r.owner_id === ownerId; });
+    if (!roster) return;
+
+    // Players grouped by position
+    const starters = new Set(roster.starters || []);
+    const byPos = {};
+    (roster.players || []).forEach(function(pid) {
+      const p = playerData[pid];
+      if (!p) return;
+      const pos = p.position || 'OTH';
+      if (!byPos[pos]) byPos[pos] = [];
+      const name = ((p.first_name || '') + ' ' + (p.last_name || '')).trim();
+      const lkey = name.toLowerCase().replace(/[^a-z ]/g, '');
+      const sig = LRFG_DATA[lkey] ? LRFG_DATA[lkey].s : null;
+      byPos[pos].push({ pid: pid, name: name, starter: starters.has(pid), sig: sig });
+    });
+
+    let playersHtml = '';
+    const allPos = POS_ORDER.concat(Object.keys(byPos).filter(function(p) { return !POS_ORDER.includes(p); }));
+    allPos.forEach(function(pos) {
+      if (!byPos[pos]) return;
+      const col = POS_COLOR[pos] || '#94a3b8';
+      byPos[pos].sort(function(a, b) { return (b.starter ? 1 : 0) - (a.starter ? 1 : 0); });
+      byPos[pos].forEach(function(p) {
+        const sigBadge = p.sig === 'target' ? '<span style="color:#00e5a0;font-size:10px;margin-left:4px;">▲</span>' :
+                         p.sig === 'avoid'  ? '<span style="color:#ef4444;font-size:10px;margin-left:4px;">▼</span>' :
+                         p.sig === 'dart'   ? '<span style="color:#ffd700;font-size:10px;margin-left:4px;">◆</span>' : '';
+        playersHtml +=
+          '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);">' +
+          '<span style="min-width:30px;font-size:9px;font-weight:700;color:' + col + ';font-family:\'DM Mono\',monospace;">' + pos + '</span>' +
+          '<span style="flex:1;font-size:12px;">' + p.name + sigBadge + '</span>' +
+          (p.starter ? '<span style="font-size:9px;color:var(--accent);font-family:\'DM Mono\',monospace;">STR</span>' : '<span style="font-size:9px;color:var(--muted);font-family:\'DM Mono\',monospace;">BN</span>') +
+          '</div>';
+      });
+    });
+
+    // Picks
+    const picks = (ld.picksByRoster[roster.roster_id] || [])
+      .sort(function(a,b) { return a.season - b.season || a.round - b.round; });
+    let picksHtml = '';
+    if (picks.length) {
+      picksHtml = '<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:4px;">' +
+        picks.map(function(pk) {
+          const label = pk.season + ' R' + pk.round + (pk.own ? '' : ' ★');
+          return '<span style="padding:2px 8px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:10px;font-family:\'DM Mono\',monospace;" title="' + (pk.own ? 'Own pick' : 'Traded pick') + '">' + label + '</span>';
+        }).join('') +
+        '</div>';
+    } else {
+      picksHtml = '<div style="margin-top:8px;font-size:11px;color:var(--muted);">No future picks (2027–2028)</div>';
+    }
+
+    html +=
+      '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">' +
+      '<div style="font-size:10px;font-weight:700;font-family:\'DM Mono\',monospace;color:var(--muted);letter-spacing:1px;margin-bottom:10px;">' + ld.name.toUpperCase() + '</div>' +
+      playersHtml +
+      picksHtml +
+      '</div>';
+  });
+
+  el.innerHTML = html || '<div class="empty-state">This manager is not in any of your loaded leagues.</div>';
+}
+
+// ── League Rankings ───────────────────────────────────────────────────────────
+
 async function loadLeagueRankings() {
   if (!allRosters.length) {
     document.getElementById('rankingsList').innerHTML = '<div class="empty-state" style="padding:40px;">Load your league first.</div>';
