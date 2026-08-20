@@ -7197,6 +7197,9 @@ const DR_POS_COLORS = {
 // a QB scarcity boost only for players who haven't shown up in a mock yet.
 const SUPERFLEX_QB_MULT = { elite: 0.32, starter: 0.45, streamer: 0.65, deep: 0.85 };
 
+// Players confirmed out for the season — excluded from all draft boards
+const SEASON_OUT = new Set(['ricky pearsall']);
+
 function getDRPlayers() {
   const isRedraft = mockFocusMode === 'redraft';
   if (isRedraft) {
