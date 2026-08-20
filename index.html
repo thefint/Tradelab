@@ -8029,6 +8029,16 @@ function renderCoachDetail(ownerId) {
   const POS_ORDER = ['QB','RB','WR','TE','K','DEF'];
   const POS_COLOR = { QB:'#ef4444', RB:'#22c55e', WR:'#3b82f6', TE:'#a855f7', K:'#f59e0b', DEF:'#64748b' };
 
+  // Count how many leagues each player appears on for this coach
+  const playerLeagueCount = {};
+  Object.values(allLeagueData).forEach(function(ld) {
+    const roster = ld.rosters.find(function(r) { return r.owner_id === ownerId; });
+    if (!roster) return;
+    (roster.players || []).forEach(function(pid) {
+      playerLeagueCount[pid] = (playerLeagueCount[pid] || 0) + 1;
+    });
+  });
+
   let html = '';
   Object.entries(allLeagueData).forEach(function(entry) {
     const lid = entry[0]; const ld = entry[1];
