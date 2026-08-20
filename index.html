@@ -8550,6 +8550,7 @@ function getRedraft1QBBoard() {
 
   // Fill in from LRFG_TIERS for players not in MS_DATA (uses overall rank as ADP proxy)
   Object.entries(LRFG_TIERS).forEach(function([key, d]) {
+    if (SEASON_OUT.has(key)) return;
     if (!msPlayers[key]) {
       msPlayers[key] = {
         key: key,
