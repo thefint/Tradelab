@@ -4585,7 +4585,7 @@ function renderBalanceSuggestion() {
 
 // ── Tab Navigation ────────────────────────────────────────────────────────
 function showTab(name) {
-  ['trade','live','buysell','sos','players','redraft','history','darts','mock','draftroom','rankings','coaches'].forEach(t => {
+  ['trade','live','sos','players','redraft','history','darts','mock','draftroom','rankings','coaches'].forEach(t => {
     const el = document.getElementById(`tab-${t}`);
     if (el) el.style.display = t === name ? 'block' : 'none';
   });
