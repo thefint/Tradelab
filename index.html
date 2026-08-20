@@ -8069,10 +8069,13 @@ function renderCoachDetail(ownerId) {
         const sigBadge = p.sig === 'target' ? '<span style="color:#00e5a0;font-size:10px;margin-left:4px;">▲</span>' :
                          p.sig === 'avoid'  ? '<span style="color:#ef4444;font-size:10px;margin-left:4px;">▼</span>' :
                          p.sig === 'dart'   ? '<span style="color:#ffd700;font-size:10px;margin-left:4px;">◆</span>' : '';
+        const multiLeague = (playerLeagueCount[p.pid] || 0) > 1;
+        const rowBg = multiLeague ? 'background:rgba(99,102,241,0.10);border-radius:4px;' : '';
         playersHtml +=
-          '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);">' +
+          '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);' + rowBg + '">' +
           '<span style="min-width:30px;font-size:9px;font-weight:700;color:' + col + ';font-family:\'DM Mono\',monospace;">' + pos + '</span>' +
           '<span style="flex:1;font-size:12px;">' + p.name + sigBadge + '</span>' +
+          (multiLeague ? '<span style="font-size:10px;color:#818cf8;font-family:\'DM Mono\',monospace;" title="Rostered in ' + playerLeagueCount[p.pid] + ' leagues">★</span>' : '') +
           (p.starter ? '<span style="font-size:9px;color:var(--accent);font-family:\'DM Mono\',monospace;">STR</span>' : '<span style="font-size:9px;color:var(--muted);font-family:\'DM Mono\',monospace;">BN</span>') +
           '</div>';
       });
