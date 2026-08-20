@@ -4590,7 +4590,7 @@ function showTab(name) {
     if (el) el.style.display = t === name ? 'block' : 'none';
   });
   document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', ['trade','live','buysell','sos','players','redraft','history','darts','mock','draftroom','rankings','coaches'][i] === name);
+    btn.classList.toggle('active', ['trade','live','sos','players','redraft','history','darts','mock','draftroom','rankings','coaches'][i] === name);
   });
   if (name === 'history'  && !document.querySelector('.history-card'))    loadTradeHistory();
   if (name === 'rankings' && !document.querySelector('.rankings-row:not(.header)')) loadLeagueRankings();
