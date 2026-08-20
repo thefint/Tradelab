@@ -7210,6 +7210,7 @@ function getDRPlayers() {
   const activeCache = isRedraft ? redraftAdpCache : mockAdpCache;
 
   const players = Object.entries(LRFG_TIERS)
+    .filter(function(e) { return !SEASON_OUT.has(e[0]); })
     .map(function([key, d]) {
       const displayName = key.replace(/\b\w/g, function(c){return c.toUpperCase();})
         .replace('Smithnjigba','Smith-Njigba')
